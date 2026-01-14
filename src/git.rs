@@ -198,3 +198,57 @@ pub fn commit(message: &str) -> Result<(), String> {
         Err(format!("git commit fallo: {}", stderr))
     }
 }
+
+/// Obtiene el diff completo de todos los archivos staged
+pub fn get_staged_diff() -> String {
+    Command::new("git")
+        .args(["diff", "--cached"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default()
+}
+
+/// Genera un mensaje de commit usando Claude CLI
+pub fn generate_commit_message_with_claude() -> Result<String, String> {
+    let diff = get_staged_diff();
+
+    if diff.is_empty() {
+        return Err("No hay cambios staged".to_string());
+    }
+
+    // Limitar el diff para no exceder el contexto
+    let diff_limited = if diff.len() > 8000 {
+        format!("{}...\n(diff truncado)", &diff[..8000])
+    } else {
+        diff
+    };
+
+    let prompt = format!(
+        "Genera un mensaje de commit conciso y descriptivo en español para estos cambios. \
+        Solo responde con el mensaje, sin explicaciones ni formato markdown. \
+        Usa el formato: tipo: descripcion (ej: feat: agregar login, fix: corregir bug en api). \
+        Maximo 72 caracteres.\n\nDiff:\n{}",
+        diff_limited
+    );
+
+    // Llamar a Claude CLI
+    let output = Command::new("claude")
+        .args(["-p", &prompt])
+        .output()
+        .map_err(|e| format!("Error ejecutando claude: {}. Asegurate de tener claude instalado (npm i -g @anthropic-ai/claude-code)", e))?;
+
+    if output.status.success() {
+        let message = String::from_utf8_lossy(&output.stdout)
+            .trim()
+            .to_string();
+
+        if message.is_empty() {
+            Err("Claude no genero respuesta".to_string())
+        } else {
+            Ok(message)
+        }
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Claude fallo: {}", stderr))
+    }
+}

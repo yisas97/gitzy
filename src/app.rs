@@ -30,6 +30,7 @@ pub struct App {
     pub mode: Mode,
     pub commit_message: String,
     pub cursor_position: usize,
+    pub generating_ai: bool,  // Indica si estamos generando mensaje con AI
 }
 
 impl App {
@@ -54,6 +55,7 @@ impl App {
             mode: Mode::Normal,
             commit_message: String::new(),
             cursor_position: 0,
+            generating_ai: false,
         }
     }
 
@@ -250,6 +252,24 @@ impl App {
                 self.message = Some(format!("Error en commit: {}", e));
             }
         }
+    }
+
+    /// Genera mensaje de commit con Claude AI
+    pub fn generate_commit_with_ai(&mut self) {
+        self.generating_ai = true;
+        self.message = Some("Generando mensaje con Claude...".to_string());
+
+        match git::generate_commit_message_with_claude() {
+            Ok(msg) => {
+                self.commit_message = msg;
+                self.cursor_position = self.commit_message.len();
+                self.message = Some("Mensaje generado con AI".to_string());
+            }
+            Err(e) => {
+                self.message = Some(format!("Error AI: {}", e));
+            }
+        }
+        self.generating_ai = false;
     }
 
     pub fn quit(&mut self) {

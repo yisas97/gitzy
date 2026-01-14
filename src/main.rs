@@ -66,6 +66,7 @@ fn main() -> Result<()> {
                             KeyCode::Backspace => app.commit_delete_char(),
                             KeyCode::Left => app.commit_cursor_left(),
                             KeyCode::Right => app.commit_cursor_right(),
+                            KeyCode::Tab => app.generate_commit_with_ai(),
                             KeyCode::Char(c) => app.commit_input_char(c),
                             _ => {}
                         }

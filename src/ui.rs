@@ -226,8 +226,8 @@ fn render_commit_popup(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
     // Calcular area del popup (centrado)
-    let popup_width = 60.min(area.width.saturating_sub(4));
-    let popup_height = 10;
+    let popup_width = 70.min(area.width.saturating_sub(4));
+    let popup_height = 12;
     let popup_x = (area.width.saturating_sub(popup_width)) / 2;
     let popup_y = (area.height.saturating_sub(popup_height)) / 2;
 
@@ -240,10 +240,11 @@ fn render_commit_popup(frame: &mut Frame, app: &App) {
     let popup_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1),  // Titulo
+            Constraint::Length(1),  // Info
             Constraint::Length(1),  // Espacio
             Constraint::Length(3),  // Input
             Constraint::Length(1),  // Espacio
+            Constraint::Length(1),  // Boton AI
             Constraint::Min(0),     // Ayuda
         ])
         .margin(1)
@@ -264,13 +265,17 @@ fn render_commit_popup(frame: &mut Frame, app: &App) {
     frame.render_widget(info, popup_chunks[0]);
 
     // Input del mensaje
-    let input_text = if app.commit_message.is_empty() {
-        "Escribe tu mensaje de commit...".to_string()
+    let input_text = if app.generating_ai {
+        "Generando con Claude AI...".to_string()
+    } else if app.commit_message.is_empty() {
+        "Escribe tu mensaje o presiona Tab para generar con AI...".to_string()
     } else {
         app.commit_message.clone()
     };
 
-    let input_style = if app.commit_message.is_empty() {
+    let input_style = if app.generating_ai {
+        Style::default().fg(Color::Magenta)
+    } else if app.commit_message.is_empty() {
         Style::default().fg(Color::DarkGray)
     } else {
         Style::default().fg(Color::White)
@@ -284,19 +289,25 @@ fn render_commit_popup(frame: &mut Frame, app: &App) {
             .title(" Mensaje "));
     frame.render_widget(input, popup_chunks[2]);
 
-    // Posicionar cursor
-    if !app.commit_message.is_empty() || app.cursor_position == 0 {
+    // Posicionar cursor (solo si no esta generando)
+    if !app.generating_ai && (!app.commit_message.is_empty() || app.cursor_position == 0) {
         frame.set_cursor_position((
             popup_chunks[2].x + app.cursor_position as u16 + 1,
             popup_chunks[2].y + 1,
         ));
     }
 
+    // Boton AI
+    let ai_button = Paragraph::new("[ Tab ] Generar mensaje con Claude AI")
+        .style(Style::default().fg(Color::Magenta))
+        .alignment(Alignment::Center);
+    frame.render_widget(ai_button, popup_chunks[4]);
+
     // Ayuda
-    let help = Paragraph::new("Enter: Confirmar | Esc: Cancelar")
+    let help = Paragraph::new("Enter: Confirmar | Esc: Cancelar | Tab: AI")
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Center);
-    frame.render_widget(help, popup_chunks[4]);
+    frame.render_widget(help, popup_chunks[5]);
 }
 
 /// Obtiene el icono segun el estado del archivo
