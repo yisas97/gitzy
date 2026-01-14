@@ -1,1 +1,4 @@
 /target
+
+# Archivos temporales de Claude CLI
+tmpclaude-*
