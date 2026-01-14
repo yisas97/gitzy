@@ -232,6 +232,14 @@ pub fn generate_commit_message_with_claude() -> Result<String, String> {
     );
 
     // Llamar a Claude CLI
+    // En Windows, los comandos npm son .cmd, necesitamos usar cmd /c
+    #[cfg(windows)]
+    let output = Command::new("cmd")
+        .args(["/c", "claude", "-p", &prompt])
+        .output()
+        .map_err(|e| format!("Error ejecutando claude: {}. Asegurate de tener claude instalado (npm i -g @anthropic-ai/claude-code)", e))?;
+
+    #[cfg(not(windows))]
     let output = Command::new("claude")
         .args(["-p", &prompt])
         .output()
