@@ -284,15 +284,18 @@ pub fn checkout_branch(branch: &str) -> Result<(), String> {
 
 /// Genera un mensaje de commit usando Claude CLI
 pub fn generate_commit_message_with_claude() -> Result<String, String> {
+    use std::io::Write;
+    use std::process::Stdio;
+
     let diff = get_staged_diff();
 
     if diff.is_empty() {
         return Err("No hay cambios staged".to_string());
     }
 
-    // Limitar el diff para no exceder el contexto
-    let diff_limited = if diff.len() > 8000 {
-        format!("{}...\n(diff truncado)", &diff[..8000])
+    // Limitar el diff para no exceder el contexto de Claude
+    let diff_limited = if diff.len() > 6000 {
+        format!("{}...\n(diff truncado)", &diff[..6000])
     } else {
         diff
     };
@@ -305,19 +308,34 @@ pub fn generate_commit_message_with_claude() -> Result<String, String> {
         diff_limited
     );
 
-    // Llamar a Claude CLI
-    // En Windows, los comandos npm son .cmd, necesitamos usar cmd /c
+    // Usar stdin para pasar el prompt (evita limite de longitud de comando en Windows)
     #[cfg(windows)]
-    let output = Command::new("cmd")
-        .args(["/c", "claude", "-p", &prompt])
-        .output()
+    let mut child = Command::new("cmd")
+        .args(["/c", "claude", "-p", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .map_err(|e| format!("Error ejecutando claude: {}. Asegurate de tener claude instalado (npm i -g @anthropic-ai/claude-code)", e))?;
 
     #[cfg(not(windows))]
-    let output = Command::new("claude")
-        .args(["-p", &prompt])
-        .output()
+    let mut child = Command::new("claude")
+        .args(["-p", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .map_err(|e| format!("Error ejecutando claude: {}. Asegurate de tener claude instalado (npm i -g @anthropic-ai/claude-code)", e))?;
+
+    // Escribir el prompt a stdin
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(prompt.as_bytes())
+            .map_err(|e| format!("Error escribiendo a stdin: {}", e))?;
+    }
+
+    // Esperar resultado
+    let output = child.wait_with_output()
+        .map_err(|e| format!("Error esperando claude: {}", e))?;
 
     if output.status.success() {
         let message = String::from_utf8_lossy(&output.stdout)

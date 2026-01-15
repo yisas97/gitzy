@@ -38,7 +38,7 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect) {
     let staged_count = app.files.iter().filter(|f| f.staged).count();
 
     let header_text = format!(
-        " tgit   {}   {} staged, {} unstaged",
+        " guit   {}   {} staged, {} unstaged",
         app.branch,
         staged_count,
         status_count
