@@ -21,6 +21,23 @@
 
 ## Instalación
 
+### Descargar binarios precompilados
+
+Descarga la versión más reciente desde [Releases](https://github.com/yisas97/guit/releases):
+
+| Plataforma | Archivo |
+|------------|---------|
+| Windows x64 | `guit-windows-x64.exe` |
+| Linux x64 | `guit-linux-x64` |
+| macOS Intel | `guit-macos-x64` |
+| macOS Apple Silicon | `guit-macos-arm64` |
+
+**Linux/macOS:** Después de descargar, dale permisos de ejecución:
+```bash
+chmod +x guit-linux-x64
+./guit-linux-x64
+```
+
 ### Desde el código fuente
 
 ```bash
