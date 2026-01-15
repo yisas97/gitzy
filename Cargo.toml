@@ -3,9 +3,9 @@ name = "guit"
 version = "0.1.0"
 edition = "2021"
 description = "Cliente Git TUI minimalista con soporte para AI"
-authors = Jesus Campos
+authors = ["Jesus Campos"]
 license = "MIT"
-repository = "https://github.com/tu-usuario/guit"
+repository = "https://github.com/yisas97/guit.git"
 keywords = ["git", "tui", "terminal", "cli"]
 categories = ["command-line-utilities", "development-tools"]
 
