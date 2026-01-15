@@ -28,6 +28,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         Mode::Commit => render_commit_popup(frame, app),
         Mode::Log => render_log_popup(frame, app),
         Mode::Branches => render_branches_popup(frame, app),
+        Mode::CreateBranch => render_create_branch_popup(frame, app),
         Mode::Normal => {}
     }
 }
@@ -442,10 +443,84 @@ fn render_branches_popup(frame: &mut Frame, app: &App) {
 
     // Ayuda
     let help_area = Rect::new(popup_x, popup_y + popup_height - 1, popup_width, 1);
-    let help = Paragraph::new(" j/k: Navegar | Enter: Cambiar | Esc: Cerrar ")
+    let help = Paragraph::new(" j/k: Nav | Enter: Cambiar | n: Nueva | Esc: Cerrar ")
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Center);
     frame.render_widget(help, help_area);
+}
+
+/// Popup para crear nueva rama
+fn render_create_branch_popup(frame: &mut Frame, app: &App) {
+    let area = frame.area();
+
+    // Calcular area del popup
+    let popup_width = 50.min(area.width.saturating_sub(4));
+    let popup_height = 8;
+    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Limpiar area
+    frame.render_widget(Clear, popup_area);
+
+    // Layout del popup
+    let popup_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),  // Info
+            Constraint::Length(1),  // Espacio
+            Constraint::Length(3),  // Input
+            Constraint::Min(0),     // Ayuda
+        ])
+        .margin(1)
+        .split(popup_area);
+
+    // Borde del popup
+    let block = Block::default()
+        .title(" Nueva Rama ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Green))
+        .style(Style::default().bg(Color::Black));
+    frame.render_widget(block, popup_area);
+
+    // Info
+    let info = Paragraph::new(format!("Crear desde: {}", app.branch))
+        .style(Style::default().fg(Color::Cyan));
+    frame.render_widget(info, popup_chunks[0]);
+
+    // Input del nombre
+    let input_text = if app.new_branch_name.is_empty() {
+        "feature/mi-nueva-rama".to_string()
+    } else {
+        app.new_branch_name.clone()
+    };
+
+    let input_style = if app.new_branch_name.is_empty() {
+        Style::default().fg(Color::DarkGray)
+    } else {
+        Style::default().fg(Color::White)
+    };
+
+    let input = Paragraph::new(input_text)
+        .style(input_style)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Yellow))
+            .title(" Nombre "));
+    frame.render_widget(input, popup_chunks[2]);
+
+    // Posicionar cursor
+    frame.set_cursor_position((
+        popup_chunks[2].x + app.new_branch_cursor as u16 + 1,
+        popup_chunks[2].y + 1,
+    ));
+
+    // Ayuda
+    let help = Paragraph::new("Enter: Crear | Esc: Cancelar")
+        .style(Style::default().fg(Color::DarkGray))
+        .alignment(Alignment::Center);
+    frame.render_widget(help, popup_chunks[3]);
 }
 
 /// Obtiene el icono segun el estado del archivo

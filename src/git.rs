@@ -267,6 +267,21 @@ pub fn get_branches() -> Vec<String> {
     }
 }
 
+/// Crea una nueva rama y cambia a ella
+pub fn create_branch(name: &str) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["checkout", "-b", name])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("git checkout -b fallo: {}", stderr))
+    }
+}
+
 /// Cambia a una rama
 pub fn checkout_branch(branch: &str) -> Result<(), String> {
     let output = Command::new("git")

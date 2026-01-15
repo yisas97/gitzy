@@ -12,10 +12,11 @@ pub enum Panel {
 /// Modo de la aplicacion
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Mode {
-    Normal,   // Navegacion normal
-    Commit,   // Escribiendo mensaje de commit
-    Log,      // Viendo historial de commits
-    Branches, // Seleccionando rama
+    Normal,       // Navegacion normal
+    Commit,       // Escribiendo mensaje de commit
+    Log,          // Viendo historial de commits
+    Branches,     // Seleccionando rama
+    CreateBranch, // Creando nueva rama
 }
 
 /// Estado principal de la aplicacion
@@ -39,6 +40,9 @@ pub struct App {
     // Branches
     pub branches: Vec<String>,
     pub branch_selected: usize,
+    // Create Branch
+    pub new_branch_name: String,
+    pub new_branch_cursor: usize,
 }
 
 impl App {
@@ -68,6 +72,8 @@ impl App {
             log_selected: 0,
             branches: Vec::new(),
             branch_selected: 0,
+            new_branch_name: String::new(),
+            new_branch_cursor: 0,
         }
     }
 
@@ -374,6 +380,74 @@ impl App {
                 Err(e) => {
                     self.message = Some(format!("Error: {}", e));
                 }
+            }
+        }
+    }
+
+    // === Funciones de Create Branch ===
+
+    /// Entra en modo crear rama
+    pub fn enter_create_branch_mode(&mut self) {
+        self.new_branch_name.clear();
+        self.new_branch_cursor = 0;
+        self.mode = Mode::CreateBranch;
+    }
+
+    /// Sale del modo crear rama
+    pub fn exit_create_branch_mode(&mut self) {
+        self.mode = Mode::Normal;
+        self.new_branch_name.clear();
+        self.new_branch_cursor = 0;
+    }
+
+    /// Agrega un caracter al nombre de la rama
+    pub fn branch_name_input_char(&mut self, c: char) {
+        // Solo permitir caracteres validos para nombres de rama
+        if c.is_alphanumeric() || c == '-' || c == '_' || c == '/' {
+            self.new_branch_name.insert(self.new_branch_cursor, c);
+            self.new_branch_cursor += 1;
+        }
+    }
+
+    /// Borra el caracter anterior
+    pub fn branch_name_delete_char(&mut self) {
+        if self.new_branch_cursor > 0 {
+            self.new_branch_cursor -= 1;
+            self.new_branch_name.remove(self.new_branch_cursor);
+        }
+    }
+
+    /// Mueve el cursor a la izquierda
+    pub fn branch_name_cursor_left(&mut self) {
+        if self.new_branch_cursor > 0 {
+            self.new_branch_cursor -= 1;
+        }
+    }
+
+    /// Mueve el cursor a la derecha
+    pub fn branch_name_cursor_right(&mut self) {
+        if self.new_branch_cursor < self.new_branch_name.len() {
+            self.new_branch_cursor += 1;
+        }
+    }
+
+    /// Crea la nueva rama
+    pub fn do_create_branch(&mut self) {
+        let name = self.new_branch_name.trim();
+
+        if name.is_empty() {
+            self.message = Some("El nombre no puede estar vacio".to_string());
+            return;
+        }
+
+        match git::create_branch(name) {
+            Ok(_) => {
+                self.message = Some(format!("Rama creada: {}", name));
+                self.exit_create_branch_mode();
+                self.refresh();
+            }
+            Err(e) => {
+                self.message = Some(format!("Error: {}", e));
             }
         }
     }

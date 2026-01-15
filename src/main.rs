@@ -87,6 +87,22 @@ fn main() -> Result<()> {
                             KeyCode::Char('j') | KeyCode::Down => app.branch_next(),
                             KeyCode::Char('k') | KeyCode::Up => app.branch_previous(),
                             KeyCode::Enter | KeyCode::Char(' ') => app.checkout_selected_branch(),
+                            KeyCode::Char('n') => {
+                                app.exit_branches_mode();
+                                app.enter_create_branch_mode();
+                            }
+                            _ => {}
+                        }
+                    }
+                    app::Mode::CreateBranch => {
+                        // Modo crear rama: escribir nombre
+                        match key.code {
+                            KeyCode::Esc => app.exit_create_branch_mode(),
+                            KeyCode::Enter => app.do_create_branch(),
+                            KeyCode::Backspace => app.branch_name_delete_char(),
+                            KeyCode::Left => app.branch_name_cursor_left(),
+                            KeyCode::Right => app.branch_name_cursor_right(),
+                            KeyCode::Char(c) => app.branch_name_input_char(c),
                             _ => {}
                         }
                     }
