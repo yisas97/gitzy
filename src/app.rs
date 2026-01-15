@@ -1,6 +1,6 @@
 // app.rs - Estado de la aplicacion
 
-use crate::git::{self, ChangedFile, LogEntry};
+use crate::git::{self, ChangedFile, LogEntry, RemoteInfo};
 
 /// Paneles de la aplicacion
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -17,6 +17,9 @@ pub enum Mode {
     Log,          // Viendo historial de commits
     Branches,     // Seleccionando rama
     CreateBranch, // Creando nueva rama
+    Remotes,      // Panel de remotes/configuracion
+    SetRemoteUrl, // Editando URL de un remote
+    AddRemote,    // Agregando nuevo remote
 }
 
 /// Estado principal de la aplicacion
@@ -43,6 +46,20 @@ pub struct App {
     // Create Branch
     pub new_branch_name: String,
     pub new_branch_cursor: usize,
+    // Remotes
+    pub remotes: Vec<RemoteInfo>,
+    pub remote_selected: usize,
+    // Estado de sync con remote
+    pub ahead: usize,
+    pub behind: usize,
+    // Editar URL de remote
+    pub edit_remote_url: String,
+    pub edit_remote_cursor: usize,
+    // Agregar nuevo remote
+    pub new_remote_name: String,
+    pub new_remote_url: String,
+    pub new_remote_field: usize, // 0 = name, 1 = url
+    pub new_remote_cursor: usize,
 }
 
 impl App {
@@ -54,6 +71,7 @@ impl App {
         } else {
             String::new()
         };
+        let (ahead, behind) = git::get_ahead_behind();
 
         Self {
             running: true,
@@ -74,6 +92,16 @@ impl App {
             branch_selected: 0,
             new_branch_name: String::new(),
             new_branch_cursor: 0,
+            remotes: Vec::new(),
+            remote_selected: 0,
+            ahead,
+            behind,
+            edit_remote_url: String::new(),
+            edit_remote_cursor: 0,
+            new_remote_name: String::new(),
+            new_remote_url: String::new(),
+            new_remote_field: 0,
+            new_remote_cursor: 0,
         }
     }
 
@@ -81,6 +109,9 @@ impl App {
     pub fn refresh(&mut self) {
         self.files = git::get_changed_files();
         self.branch = git::get_current_branch();
+        let (ahead, behind) = git::get_ahead_behind();
+        self.ahead = ahead;
+        self.behind = behind;
 
         // Ajustar seleccion si es necesario
         if self.selected >= self.files.len() && !self.files.is_empty() {
@@ -444,6 +475,329 @@ impl App {
             Ok(_) => {
                 self.message = Some(format!("Rama creada: {}", name));
                 self.exit_create_branch_mode();
+                self.refresh();
+            }
+            Err(e) => {
+                self.message = Some(format!("Error: {}", e));
+            }
+        }
+    }
+
+    // === Funciones de Remotes ===
+
+    /// Entra en modo remotes
+    pub fn enter_remotes_mode(&mut self) {
+        self.remotes = git::get_remotes();
+        self.remote_selected = 0;
+        self.mode = Mode::Remotes;
+    }
+
+    /// Sale del modo remotes
+    pub fn exit_remotes_mode(&mut self) {
+        self.mode = Mode::Normal;
+    }
+
+    /// Navega hacia abajo en remotes
+    pub fn remote_next(&mut self) {
+        if !self.remotes.is_empty() {
+            self.remote_selected = (self.remote_selected + 1) % self.remotes.len();
+        }
+    }
+
+    /// Navega hacia arriba en remotes
+    pub fn remote_previous(&mut self) {
+        if !self.remotes.is_empty() {
+            self.remote_selected = self.remote_selected
+                .checked_sub(1)
+                .unwrap_or(self.remotes.len() - 1);
+        }
+    }
+
+    /// Elimina el remote seleccionado
+    pub fn delete_selected_remote(&mut self) {
+        if let Some(remote) = self.remotes.get(self.remote_selected) {
+            let name = remote.name.clone();
+            match git::remove_remote(&name) {
+                Ok(_) => {
+                    self.message = Some(format!("Remote eliminado: {}", name));
+                    self.remotes = git::get_remotes();
+                    if self.remote_selected >= self.remotes.len() && !self.remotes.is_empty() {
+                        self.remote_selected = self.remotes.len() - 1;
+                    }
+                }
+                Err(e) => {
+                    self.message = Some(format!("Error: {}", e));
+                }
+            }
+        }
+    }
+
+    // === Funciones de SetRemoteUrl ===
+
+    /// Entra en modo editar URL de remote
+    pub fn enter_set_url_mode(&mut self) {
+        if let Some(remote) = self.remotes.get(self.remote_selected) {
+            self.edit_remote_url = remote.push_url.clone();
+            if self.edit_remote_url.is_empty() {
+                self.edit_remote_url = remote.fetch_url.clone();
+            }
+            self.edit_remote_cursor = self.edit_remote_url.len();
+            self.mode = Mode::SetRemoteUrl;
+        }
+    }
+
+    /// Sale del modo editar URL
+    pub fn exit_set_url_mode(&mut self) {
+        self.mode = Mode::Remotes;
+        self.edit_remote_url.clear();
+        self.edit_remote_cursor = 0;
+    }
+
+    /// Agrega un caracter a la URL
+    pub fn set_url_input_char(&mut self, c: char) {
+        self.edit_remote_url.insert(self.edit_remote_cursor, c);
+        self.edit_remote_cursor += 1;
+    }
+
+    /// Borra el caracter anterior
+    pub fn set_url_delete_char(&mut self) {
+        if self.edit_remote_cursor > 0 {
+            self.edit_remote_cursor -= 1;
+            self.edit_remote_url.remove(self.edit_remote_cursor);
+        }
+    }
+
+    /// Mueve el cursor a la izquierda
+    pub fn set_url_cursor_left(&mut self) {
+        if self.edit_remote_cursor > 0 {
+            self.edit_remote_cursor -= 1;
+        }
+    }
+
+    /// Mueve el cursor a la derecha
+    pub fn set_url_cursor_right(&mut self) {
+        if self.edit_remote_cursor < self.edit_remote_url.len() {
+            self.edit_remote_cursor += 1;
+        }
+    }
+
+    /// Aplica el cambio de URL
+    pub fn do_set_remote_url(&mut self) {
+        let url = self.edit_remote_url.trim();
+        if url.is_empty() {
+            self.message = Some("La URL no puede estar vacia".to_string());
+            return;
+        }
+
+        if let Some(remote) = self.remotes.get(self.remote_selected) {
+            let name = remote.name.clone();
+            match git::set_remote_url(&name, url) {
+                Ok(_) => {
+                    self.message = Some(format!("URL actualizada para {}", name));
+                    self.remotes = git::get_remotes();
+                    self.exit_set_url_mode();
+                }
+                Err(e) => {
+                    self.message = Some(format!("Error: {}", e));
+                }
+            }
+        }
+    }
+
+    // === Funciones de AddRemote ===
+
+    /// Entra en modo agregar remote
+    pub fn enter_add_remote_mode(&mut self) {
+        self.new_remote_name.clear();
+        self.new_remote_url.clear();
+        self.new_remote_field = 0;
+        self.new_remote_cursor = 0;
+        self.mode = Mode::AddRemote;
+    }
+
+    /// Sale del modo agregar remote
+    pub fn exit_add_remote_mode(&mut self) {
+        self.mode = Mode::Remotes;
+        self.new_remote_name.clear();
+        self.new_remote_url.clear();
+        self.new_remote_field = 0;
+        self.new_remote_cursor = 0;
+    }
+
+    /// Cambia entre campo nombre y URL
+    pub fn add_remote_toggle_field(&mut self) {
+        self.new_remote_field = if self.new_remote_field == 0 { 1 } else { 0 };
+        self.new_remote_cursor = if self.new_remote_field == 0 {
+            self.new_remote_name.len()
+        } else {
+            self.new_remote_url.len()
+        };
+    }
+
+    /// Agrega un caracter al campo activo
+    pub fn add_remote_input_char(&mut self, c: char) {
+        if self.new_remote_field == 0 {
+            // Solo caracteres validos para nombre de remote
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                self.new_remote_name.insert(self.new_remote_cursor, c);
+                self.new_remote_cursor += 1;
+            }
+        } else {
+            self.new_remote_url.insert(self.new_remote_cursor, c);
+            self.new_remote_cursor += 1;
+        }
+    }
+
+    /// Borra el caracter anterior
+    pub fn add_remote_delete_char(&mut self) {
+        if self.new_remote_cursor > 0 {
+            self.new_remote_cursor -= 1;
+            if self.new_remote_field == 0 {
+                self.new_remote_name.remove(self.new_remote_cursor);
+            } else {
+                self.new_remote_url.remove(self.new_remote_cursor);
+            }
+        }
+    }
+
+    /// Mueve el cursor a la izquierda
+    pub fn add_remote_cursor_left(&mut self) {
+        if self.new_remote_cursor > 0 {
+            self.new_remote_cursor -= 1;
+        }
+    }
+
+    /// Mueve el cursor a la derecha
+    pub fn add_remote_cursor_right(&mut self) {
+        let max_len = if self.new_remote_field == 0 {
+            self.new_remote_name.len()
+        } else {
+            self.new_remote_url.len()
+        };
+        if self.new_remote_cursor < max_len {
+            self.new_remote_cursor += 1;
+        }
+    }
+
+    /// Agrega el nuevo remote
+    pub fn do_add_remote(&mut self) {
+        let name = self.new_remote_name.trim();
+        let url = self.new_remote_url.trim();
+
+        if name.is_empty() {
+            self.message = Some("El nombre no puede estar vacio".to_string());
+            return;
+        }
+        if url.is_empty() {
+            self.message = Some("La URL no puede estar vacia".to_string());
+            return;
+        }
+
+        match git::add_remote(name, url) {
+            Ok(_) => {
+                self.message = Some(format!("Remote agregado: {}", name));
+                self.remotes = git::get_remotes();
+                self.exit_add_remote_mode();
+            }
+            Err(e) => {
+                self.message = Some(format!("Error: {}", e));
+            }
+        }
+    }
+
+    // === Funciones de Push/Pull/Fetch ===
+
+    /// Hace push al remote
+    pub fn do_push(&mut self) {
+        let remote = match git::get_default_remote() {
+            Some(r) => r,
+            None => {
+                self.message = Some("No hay remotes configurados".to_string());
+                return;
+            }
+        };
+
+        self.message = Some(format!("Pushing a {}...", remote));
+
+        // Si no hay upstream, usar push -u
+        if !git::has_upstream() {
+            match git::push_set_upstream(&remote, &self.branch) {
+                Ok(output) => {
+                    let msg = if output.is_empty() {
+                        "Push exitoso (upstream configurado)".to_string()
+                    } else {
+                        format!("Push exitoso: {}", output.lines().next().unwrap_or(""))
+                    };
+                    self.message = Some(msg);
+                    self.refresh();
+                }
+                Err(e) => {
+                    self.message = Some(format!("Error: {}", e));
+                }
+            }
+        } else {
+            match git::push(&remote, &self.branch) {
+                Ok(output) => {
+                    let msg = if output.is_empty() {
+                        "Push exitoso".to_string()
+                    } else {
+                        format!("Push: {}", output.lines().next().unwrap_or("exitoso"))
+                    };
+                    self.message = Some(msg);
+                    self.refresh();
+                }
+                Err(e) => {
+                    self.message = Some(format!("Error: {}", e));
+                }
+            }
+        }
+    }
+
+    /// Hace pull del remote
+    pub fn do_pull(&mut self) {
+        let remote = match git::get_default_remote() {
+            Some(r) => r,
+            None => {
+                self.message = Some("No hay remotes configurados".to_string());
+                return;
+            }
+        };
+
+        self.message = Some(format!("Pulling de {}...", remote));
+
+        match git::pull(&remote, &self.branch) {
+            Ok(output) => {
+                let msg = if output.contains("Already up to date") {
+                    "Ya estas actualizado".to_string()
+                } else if output.is_empty() {
+                    "Pull exitoso".to_string()
+                } else {
+                    format!("Pull: {}", output.lines().next().unwrap_or("exitoso"))
+                };
+                self.message = Some(msg);
+                self.refresh();
+            }
+            Err(e) => {
+                self.message = Some(format!("Error: {}", e));
+            }
+        }
+    }
+
+    /// Hace fetch del remote
+    pub fn do_fetch(&mut self) {
+        let remote = match git::get_default_remote() {
+            Some(r) => r,
+            None => {
+                self.message = Some("No hay remotes configurados".to_string());
+                return;
+            }
+        };
+
+        self.message = Some(format!("Fetching de {}...", remote));
+
+        match git::fetch(&remote) {
+            Ok(output) => {
+                self.message = Some(output);
                 self.refresh();
             }
             Err(e) => {

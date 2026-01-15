@@ -106,6 +106,43 @@ fn main() -> Result<()> {
                             _ => {}
                         }
                     }
+                    app::Mode::Remotes => {
+                        // Modo remotes: gestionar remotes
+                        match key.code {
+                            KeyCode::Esc | KeyCode::Char('q') => app.exit_remotes_mode(),
+                            KeyCode::Char('j') | KeyCode::Down => app.remote_next(),
+                            KeyCode::Char('k') | KeyCode::Up => app.remote_previous(),
+                            KeyCode::Char('e') | KeyCode::Enter => app.enter_set_url_mode(),
+                            KeyCode::Char('a') => app.enter_add_remote_mode(),
+                            KeyCode::Char('d') => app.delete_selected_remote(),
+                            _ => {}
+                        }
+                    }
+                    app::Mode::SetRemoteUrl => {
+                        // Modo editar URL de remote
+                        match key.code {
+                            KeyCode::Esc => app.exit_set_url_mode(),
+                            KeyCode::Enter => app.do_set_remote_url(),
+                            KeyCode::Backspace => app.set_url_delete_char(),
+                            KeyCode::Left => app.set_url_cursor_left(),
+                            KeyCode::Right => app.set_url_cursor_right(),
+                            KeyCode::Char(c) => app.set_url_input_char(c),
+                            _ => {}
+                        }
+                    }
+                    app::Mode::AddRemote => {
+                        // Modo agregar remote
+                        match key.code {
+                            KeyCode::Esc => app.exit_add_remote_mode(),
+                            KeyCode::Enter => app.do_add_remote(),
+                            KeyCode::Tab => app.add_remote_toggle_field(),
+                            KeyCode::Backspace => app.add_remote_delete_char(),
+                            KeyCode::Left => app.add_remote_cursor_left(),
+                            KeyCode::Right => app.add_remote_cursor_right(),
+                            KeyCode::Char(c) => app.add_remote_input_char(c),
+                            _ => {}
+                        }
+                    }
                     app::Mode::Normal => {
                         // Modo normal: navegacion y comandos
                         match key.code {
@@ -139,9 +176,15 @@ fn main() -> Result<()> {
                             KeyCode::Char('d') => app.discard_selected(),
                             KeyCode::Char('c') => app.enter_commit_mode(),
 
-                            // Log y Branches
+                            // Log, Branches y Remotes
                             KeyCode::Char('g') => app.enter_log_mode(),      // g = git log
                             KeyCode::Char('b') => app.enter_branches_mode(), // b = branches
+                            KeyCode::Char('s') => app.enter_remotes_mode(),  // s = settings/remotes
+
+                            // Push, Pull, Fetch
+                            KeyCode::Char('p') => app.do_push(),             // p = push
+                            KeyCode::Char('P') => app.do_pull(),             // P = pull
+                            KeyCode::Char('f') => app.do_fetch(),            // f = fetch
 
                             // Refrescar
                             KeyCode::Char('r') => app.refresh(),

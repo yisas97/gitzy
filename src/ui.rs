@@ -29,6 +29,9 @@ pub fn render(frame: &mut Frame, app: &App) {
         Mode::Log => render_log_popup(frame, app),
         Mode::Branches => render_branches_popup(frame, app),
         Mode::CreateBranch => render_create_branch_popup(frame, app),
+        Mode::Remotes => render_remotes_popup(frame, app),
+        Mode::SetRemoteUrl => render_set_url_popup(frame, app),
+        Mode::AddRemote => render_add_remote_popup(frame, app),
         Mode::Normal => {}
     }
 }
@@ -38,9 +41,20 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect) {
     let status_count = app.files.iter().filter(|f| !f.staged).count();
     let staged_count = app.files.iter().filter(|f| f.staged).count();
 
+    // Indicador de ahead/behind
+    let sync_indicator = if app.ahead > 0 || app.behind > 0 {
+        format!(" [{}{}]",
+            if app.ahead > 0 { format!("{}+", app.ahead) } else { String::new() },
+            if app.behind > 0 { format!("{}-", app.behind) } else { String::new() }
+        )
+    } else {
+        String::new()
+    };
+
     let header_text = format!(
-        " gitzy   {}   {} staged, {} unstaged",
+        " gitzy   {}{}   {} staged, {} unstaged",
         app.branch,
+        sync_indicator,
         staged_count,
         status_count
     );
@@ -212,7 +226,7 @@ fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
     let help_text = if let Some(msg) = &app.message {
         msg.clone()
     } else {
-        "q:Salir  j/k:Nav  Space:Stage  c:Commit  g:Log  b:Ramas  a:All  u:Unstage  d:Discard  r:Refresh".to_string()
+        "q:Salir j/k:Nav Space:Stage a:All u:Unstage d:Discard c:Commit g:Log b:Ramas s:Remotes p:Push P:Pull f:Fetch r:Refresh".to_string()
     };
 
     let footer = Paragraph::new(help_text)
@@ -518,6 +532,269 @@ fn render_create_branch_popup(frame: &mut Frame, app: &App) {
 
     // Ayuda
     let help = Paragraph::new("Enter: Crear | Esc: Cancelar")
+        .style(Style::default().fg(Color::DarkGray))
+        .alignment(Alignment::Center);
+    frame.render_widget(help, popup_chunks[3]);
+}
+
+/// Popup para gestionar remotes
+fn render_remotes_popup(frame: &mut Frame, app: &App) {
+    let area = frame.area();
+
+    // Calcular area del popup
+    let popup_width = 70.min(area.width.saturating_sub(4));
+    let popup_height = (app.remotes.len() as u16 + 6).min(area.height.saturating_sub(4)).max(8);
+    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Limpiar area
+    frame.render_widget(Clear, popup_area);
+
+    // Crear items de remotes
+    let items: Vec<ListItem> = app.remotes
+        .iter()
+        .enumerate()
+        .map(|(idx, remote)| {
+            let is_selected = idx == app.remote_selected;
+            let selector = if is_selected { ">> " } else { "   " };
+
+            let style = if is_selected {
+                Style::default().bg(Color::DarkGray).bold()
+            } else {
+                Style::default().fg(Color::White)
+            };
+
+            // Mostrar nombre y URL (truncada si es muy larga)
+            let url = if remote.push_url.len() > 45 {
+                format!("{}...", &remote.push_url[..42])
+            } else if !remote.push_url.is_empty() {
+                remote.push_url.clone()
+            } else {
+                remote.fetch_url.clone()
+            };
+
+            ListItem::new(Line::from(vec![
+                Span::styled(selector, Style::default().fg(Color::Cyan)),
+                Span::styled(&remote.name, Style::default().fg(Color::Yellow).bold()),
+                Span::styled(" -> ", Style::default().fg(Color::DarkGray)),
+                Span::styled(url, style),
+            ]))
+        })
+        .collect();
+
+    let items = if items.is_empty() {
+        vec![ListItem::new(Line::from(vec![
+            Span::styled("  No hay remotes configurados", Style::default().fg(Color::DarkGray)),
+        ]))]
+    } else {
+        items
+    };
+
+    let list = List::new(items)
+        .block(Block::default()
+            .title(format!(" Remotes ({}) ", app.remotes.len()))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Blue))
+            .style(Style::default().bg(Color::Black)));
+
+    frame.render_widget(list, popup_area);
+
+    // Ayuda
+    let help_area = Rect::new(popup_x, popup_y + popup_height - 1, popup_width, 1);
+    let help = Paragraph::new(" j/k: Nav | e: Editar URL | a: Agregar | d: Eliminar | Esc: Cerrar ")
+        .style(Style::default().fg(Color::DarkGray))
+        .alignment(Alignment::Center);
+    frame.render_widget(help, help_area);
+}
+
+/// Popup para editar URL de un remote
+fn render_set_url_popup(frame: &mut Frame, app: &App) {
+    let area = frame.area();
+
+    // Calcular area del popup
+    let popup_width = 70.min(area.width.saturating_sub(4));
+    let popup_height = 9;
+    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Limpiar area
+    frame.render_widget(Clear, popup_area);
+
+    // Layout del popup
+    let popup_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),  // Info
+            Constraint::Length(1),  // Espacio
+            Constraint::Length(3),  // Input
+            Constraint::Min(0),     // Ayuda
+        ])
+        .margin(1)
+        .split(popup_area);
+
+    // Borde del popup
+    let remote_name = app.remotes.get(app.remote_selected)
+        .map(|r| r.name.as_str())
+        .unwrap_or("?");
+    let block = Block::default()
+        .title(format!(" Editar URL - {} ", remote_name))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Yellow))
+        .style(Style::default().bg(Color::Black));
+    frame.render_widget(block, popup_area);
+
+    // Info
+    let info = Paragraph::new("Ingresa la nueva URL del remote")
+        .style(Style::default().fg(Color::Cyan));
+    frame.render_widget(info, popup_chunks[0]);
+
+    // Input de la URL
+    let input_text = if app.edit_remote_url.is_empty() {
+        "git@github.com:user/repo.git".to_string()
+    } else {
+        app.edit_remote_url.clone()
+    };
+
+    let input_style = if app.edit_remote_url.is_empty() {
+        Style::default().fg(Color::DarkGray)
+    } else {
+        Style::default().fg(Color::White)
+    };
+
+    let input = Paragraph::new(input_text)
+        .style(input_style)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Blue))
+            .title(" URL "));
+    frame.render_widget(input, popup_chunks[2]);
+
+    // Posicionar cursor
+    frame.set_cursor_position((
+        popup_chunks[2].x + app.edit_remote_cursor as u16 + 1,
+        popup_chunks[2].y + 1,
+    ));
+
+    // Ayuda
+    let help = Paragraph::new("Enter: Guardar | Esc: Cancelar")
+        .style(Style::default().fg(Color::DarkGray))
+        .alignment(Alignment::Center);
+    frame.render_widget(help, popup_chunks[3]);
+}
+
+/// Popup para agregar un nuevo remote
+fn render_add_remote_popup(frame: &mut Frame, app: &App) {
+    let area = frame.area();
+
+    // Calcular area del popup
+    let popup_width = 70.min(area.width.saturating_sub(4));
+    let popup_height = 12;
+    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Limpiar area
+    frame.render_widget(Clear, popup_area);
+
+    // Layout del popup
+    let popup_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),  // Info
+            Constraint::Length(3),  // Input nombre
+            Constraint::Length(3),  // Input URL
+            Constraint::Min(0),     // Ayuda
+        ])
+        .margin(1)
+        .split(popup_area);
+
+    // Borde del popup
+    let block = Block::default()
+        .title(" Agregar Remote ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Green))
+        .style(Style::default().bg(Color::Black));
+    frame.render_widget(block, popup_area);
+
+    // Info
+    let info = Paragraph::new("Tab para cambiar entre campos")
+        .style(Style::default().fg(Color::Cyan));
+    frame.render_widget(info, popup_chunks[0]);
+
+    // Input del nombre
+    let name_text = if app.new_remote_name.is_empty() {
+        "origin".to_string()
+    } else {
+        app.new_remote_name.clone()
+    };
+
+    let name_style = if app.new_remote_name.is_empty() {
+        Style::default().fg(Color::DarkGray)
+    } else {
+        Style::default().fg(Color::White)
+    };
+
+    let name_border = if app.new_remote_field == 0 {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default().fg(Color::Blue)
+    };
+
+    let name_input = Paragraph::new(name_text)
+        .style(name_style)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(name_border)
+            .title(" Nombre "));
+    frame.render_widget(name_input, popup_chunks[1]);
+
+    // Input de la URL
+    let url_text = if app.new_remote_url.is_empty() {
+        "git@github.com:user/repo.git".to_string()
+    } else {
+        app.new_remote_url.clone()
+    };
+
+    let url_style = if app.new_remote_url.is_empty() {
+        Style::default().fg(Color::DarkGray)
+    } else {
+        Style::default().fg(Color::White)
+    };
+
+    let url_border = if app.new_remote_field == 1 {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default().fg(Color::Blue)
+    };
+
+    let url_input = Paragraph::new(url_text)
+        .style(url_style)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(url_border)
+            .title(" URL "));
+    frame.render_widget(url_input, popup_chunks[2]);
+
+    // Posicionar cursor en el campo activo
+    if app.new_remote_field == 0 {
+        frame.set_cursor_position((
+            popup_chunks[1].x + app.new_remote_cursor as u16 + 1,
+            popup_chunks[1].y + 1,
+        ));
+    } else {
+        frame.set_cursor_position((
+            popup_chunks[2].x + app.new_remote_cursor as u16 + 1,
+            popup_chunks[2].y + 1,
+        ));
+    }
+
+    // Ayuda
+    let help = Paragraph::new("Enter: Agregar | Tab: Cambiar campo | Esc: Cancelar")
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Center);
     frame.render_widget(help, popup_chunks[3]);

@@ -297,6 +297,228 @@ pub fn checkout_branch(branch: &str) -> Result<(), String> {
     }
 }
 
+// === Funciones de Remotes ===
+
+/// Información de un remote
+#[derive(Debug, Clone)]
+pub struct RemoteInfo {
+    pub name: String,
+    pub fetch_url: String,
+    pub push_url: String,
+}
+
+/// Obtiene la lista de remotes configurados
+pub fn get_remotes() -> Vec<RemoteInfo> {
+    let output = Command::new("git")
+        .args(["remote", "-v"])
+        .output();
+
+    match output {
+        Ok(o) => {
+            let stdout = String::from_utf8_lossy(&o.stdout);
+            let mut remotes: Vec<RemoteInfo> = Vec::new();
+
+            for line in stdout.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let name = parts[0].to_string();
+                    let url = parts[1].to_string();
+                    let is_fetch = line.contains("(fetch)");
+
+                    // Buscar si ya existe este remote
+                    if let Some(remote) = remotes.iter_mut().find(|r| r.name == name) {
+                        if is_fetch {
+                            remote.fetch_url = url;
+                        } else {
+                            remote.push_url = url;
+                        }
+                    } else {
+                        remotes.push(RemoteInfo {
+                            name,
+                            fetch_url: if is_fetch { url.clone() } else { String::new() },
+                            push_url: if !is_fetch { url } else { String::new() },
+                        });
+                    }
+                }
+            }
+            remotes
+        }
+        Err(_) => Vec::new(),
+    }
+}
+
+/// Obtiene la URL de un remote específico
+#[allow(dead_code)]
+pub fn get_remote_url(name: &str) -> Option<String> {
+    Command::new("git")
+        .args(["remote", "get-url", name])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+}
+
+/// Cambia la URL de un remote
+pub fn set_remote_url(name: &str, url: &str) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["remote", "set-url", name, url])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("git remote set-url fallo: {}", stderr))
+    }
+}
+
+/// Agrega un nuevo remote
+pub fn add_remote(name: &str, url: &str) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["remote", "add", name, url])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("git remote add fallo: {}", stderr))
+    }
+}
+
+/// Elimina un remote
+pub fn remove_remote(name: &str) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["remote", "remove", name])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("git remote remove fallo: {}", stderr))
+    }
+}
+
+/// Hace git push
+pub fn push(remote: &str, branch: &str) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["push", remote, branch])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Git push escribe el progreso en stderr
+        Ok(format!("{}{}", stdout, stderr).trim().to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("git push fallo: {}", stderr))
+    }
+}
+
+/// Hace git push con -u para establecer upstream
+pub fn push_set_upstream(remote: &str, branch: &str) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["push", "-u", remote, branch])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Ok(format!("{}{}", stdout, stderr).trim().to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("git push -u fallo: {}", stderr))
+    }
+}
+
+/// Hace git pull
+pub fn pull(remote: &str, branch: &str) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["pull", remote, branch])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout.trim().to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("git pull fallo: {}", stderr))
+    }
+}
+
+/// Hace git fetch
+pub fn fetch(remote: &str) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["fetch", remote])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let result = format!("{}{}", stdout, stderr).trim().to_string();
+        if result.is_empty() {
+            Ok("Fetch completado".to_string())
+        } else {
+            Ok(result)
+        }
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("git fetch fallo: {}", stderr))
+    }
+}
+
+/// Obtiene cuantos commits adelante/atras esta la rama respecto al upstream
+pub fn get_ahead_behind() -> (usize, usize) {
+    let output = Command::new("git")
+        .args(["rev-list", "--left-right", "--count", "HEAD...@{upstream}"])
+        .output();
+
+    match output {
+        Ok(o) if o.status.success() => {
+            let stdout = String::from_utf8_lossy(&o.stdout);
+            let parts: Vec<&str> = stdout.trim().split_whitespace().collect();
+            if parts.len() >= 2 {
+                let ahead = parts[0].parse().unwrap_or(0);
+                let behind = parts[1].parse().unwrap_or(0);
+                (ahead, behind)
+            } else {
+                (0, 0)
+            }
+        }
+        _ => (0, 0),
+    }
+}
+
+/// Verifica si la rama actual tiene upstream configurado
+pub fn has_upstream() -> bool {
+    Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "@{upstream}"])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+/// Obtiene el nombre del remote por defecto (generalmente "origin")
+pub fn get_default_remote() -> Option<String> {
+    let remotes = get_remotes();
+    if remotes.is_empty() {
+        None
+    } else if let Some(origin) = remotes.iter().find(|r| r.name == "origin") {
+        Some(origin.name.clone())
+    } else {
+        Some(remotes[0].name.clone())
+    }
+}
+
 /// Genera un mensaje de commit usando Claude CLI
 pub fn generate_commit_message_with_claude() -> Result<String, String> {
     use std::io::Write;
