@@ -1,4 +1,4 @@
-# guit
+# gitzy
 
 > Minimalist Git TUI (Terminal User Interface) client with AI support
 
@@ -7,7 +7,7 @@
 
 *Leer en [Español](README.es.md)*
 
-**guit** is an intuitive and lightweight terminal interface for Git that lets you manage your repositories without leaving the command line. Navigate changes, stage files, view diffs, manage branches, and create commits, all from an elegant text-based interface.
+**gitzy** is an intuitive and lightweight terminal interface for Git that lets you manage your repositories without leaving the command line. Navigate changes, stage files, view diffs, manage branches, and create commits, all from an elegant text-based interface.
 
 ## Features
 
@@ -25,27 +25,27 @@
 
 ### Download precompiled binaries
 
-Download the latest version from [Releases](https://github.com/yisas97/guit/releases):
+Download the latest version from [Releases](https://github.com/yisas97/gitzy/releases):
 
 | Platform | File |
 |----------|------|
-| Windows x64 | `guit-windows-x64.exe` |
-| Linux x64 | `guit-linux-x64` |
-| macOS Intel | `guit-macos-x64` |
-| macOS Apple Silicon | `guit-macos-arm64` |
+| Windows x64 | `gitzy-windows-x64.exe` |
+| Linux x64 | `gitzy-linux-x64` |
+| macOS Intel | `gitzy-macos-x64` |
+| macOS Apple Silicon | `gitzy-macos-arm64` |
 
 **Linux/macOS:** After downloading, give it execution permissions:
 ```bash
-chmod +x guit-linux-x64
-./guit-linux-x64
+chmod +x gitzy-linux-x64
+./gitzy-linux-x64
 ```
 
 ### From source
 
 ```bash
 # Clone the repository
-git clone https://github.com/yisas97/guit.git
-cd guit
+git clone https://github.com/yisas97/gitzy.git
+cd gitzy
 
 # Build and install
 cargo install --path .
@@ -58,11 +58,11 @@ cargo install --path .
 
 ## Usage
 
-Run `guit` inside any Git repository:
+Run `gitzy` inside any Git repository:
 
 ```bash
 cd your-git-project
-guit
+gitzy
 ```
 
 ## Keyboard shortcuts
@@ -127,7 +127,7 @@ guit
 ## Project structure
 
 ```
-guit/
+gitzy/
 ├── src/
 │   ├── main.rs      # Entry point and event loop
 │   ├── app.rs       # Application state logic

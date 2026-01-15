@@ -1,16 +1,16 @@
 [package]
-name = "guit"
+name = "gitzy"
 version = "0.1.0"
 edition = "2021"
 description = "Cliente Git TUI minimalista con soporte para AI"
 authors = ["Jesus Campos"]
 license = "MIT"
-repository = "https://github.com/yisas97/guit.git"
+repository = "https://github.com/yisas97/gitzy.git"
 keywords = ["git", "tui", "terminal", "cli"]
 categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
-name = "guit"
+name = "gitzy"
 path = "src/main.rs"
 
 [dependencies]

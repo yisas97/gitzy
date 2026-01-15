@@ -1,4 +1,4 @@
-// main.rs - Punto de entrada de tgit
+// main.rs - Punto de entrada de gitzy
 
 mod app;
 mod git;

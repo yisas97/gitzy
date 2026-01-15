@@ -1,4 +1,4 @@
-# guit
+# gitzy
 
 > Cliente Git TUI (Terminal User Interface) minimalista con soporte para AI
 
@@ -7,7 +7,7 @@
 
 *Read this in [English](README.md)*
 
-**guit** es una interfaz de terminal intuitiva y ligera para Git que te permite gestionar tus repositorios sin salir de la línea de comandos. Navega por cambios, stage archivos, visualiza diffs, administra ramas y crea commits, todo desde una interfaz elegante basada en texto.
+**gitzy** es una interfaz de terminal intuitiva y ligera para Git que te permite gestionar tus repositorios sin salir de la línea de comandos. Navega por cambios, stage archivos, visualiza diffs, administra ramas y crea commits, todo desde una interfaz elegante basada en texto.
 
 ## Características
 
@@ -25,27 +25,27 @@
 
 ### Descargar binarios precompilados
 
-Descarga la versión más reciente desde [Releases](https://github.com/yisas97/guit/releases):
+Descarga la versión más reciente desde [Releases](https://github.com/yisas97/gitzy/releases):
 
 | Plataforma | Archivo |
 |------------|---------|
-| Windows x64 | `guit-windows-x64.exe` |
-| Linux x64 | `guit-linux-x64` |
-| macOS Intel | `guit-macos-x64` |
-| macOS Apple Silicon | `guit-macos-arm64` |
+| Windows x64 | `gitzy-windows-x64.exe` |
+| Linux x64 | `gitzy-linux-x64` |
+| macOS Intel | `gitzy-macos-x64` |
+| macOS Apple Silicon | `gitzy-macos-arm64` |
 
 **Linux/macOS:** Después de descargar, dale permisos de ejecución:
 ```bash
-chmod +x guit-linux-x64
-./guit-linux-x64
+chmod +x gitzy-linux-x64
+./gitzy-linux-x64
 ```
 
 ### Desde el código fuente
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/yisas97/guit.git
-cd guit
+git clone https://github.com/yisas97/gitzy.git
+cd gitzy
 
 # Compilar e instalar
 cargo install --path .
@@ -58,11 +58,11 @@ cargo install --path .
 
 ## Uso
 
-Ejecuta `guit` dentro de cualquier repositorio Git:
+Ejecuta `gitzy` dentro de cualquier repositorio Git:
 
 ```bash
 cd tu-proyecto-git
-guit
+gitzy
 ```
 
 ## Atajos de teclado
@@ -127,7 +127,7 @@ guit
 ## Estructura del proyecto
 
 ```
-guit/
+gitzy/
 ├── src/
 │   ├── main.rs      # Punto de entrada y event loop
 │   ├── app.rs       # Lógica de estado de la aplicación

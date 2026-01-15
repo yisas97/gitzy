@@ -1,13 +1,13 @@
-# Contribuir a guit
+# Contribuir a gitzy
 
-Gracias por tu interés en contribuir a guit.
+Gracias por tu interés en contribuir a gitzy.
 
 ## Desarrollo local
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/yisas97/guit.git
-cd guit
+git clone https://github.com/yisas97/gitzy.git
+cd gitzy
 
 # Ejecutar en modo desarrollo
 cargo run
@@ -51,7 +51,7 @@ El workflow automáticamente:
 ## Estructura del proyecto
 
 ```
-guit/
+gitzy/
 ├── src/
 │   ├── main.rs      # Punto de entrada y event loop
 │   ├── app.rs       # Lógica de estado de la aplicación
