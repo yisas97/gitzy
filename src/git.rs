@@ -208,6 +208,80 @@ pub fn get_staged_diff() -> String {
         .unwrap_or_default()
 }
 
+/// Estructura para un commit del log
+#[derive(Debug, Clone)]
+pub struct LogEntry {
+    pub hash: String,      // Hash corto
+    pub message: String,   // Mensaje del commit
+    pub author: String,    // Autor
+    pub date: String,      // Fecha relativa
+}
+
+/// Obtiene el log de commits
+pub fn get_log(limit: usize) -> Vec<LogEntry> {
+    let output = Command::new("git")
+        .args([
+            "log",
+            &format!("-{}", limit),
+            "--pretty=format:%h\t%s\t%an\t%ar",
+        ])
+        .output();
+
+    match output {
+        Ok(o) => {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .filter_map(|line| {
+                    let parts: Vec<&str> = line.split('\t').collect();
+                    if parts.len() >= 4 {
+                        Some(LogEntry {
+                            hash: parts[0].to_string(),
+                            message: parts[1].to_string(),
+                            author: parts[2].to_string(),
+                            date: parts[3].to_string(),
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        }
+        Err(_) => Vec::new(),
+    }
+}
+
+/// Obtiene la lista de ramas locales
+pub fn get_branches() -> Vec<String> {
+    let output = Command::new("git")
+        .args(["branch", "--format=%(refname:short)"])
+        .output();
+
+    match output {
+        Ok(o) => {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .map(|s| s.to_string())
+                .collect()
+        }
+        Err(_) => Vec::new(),
+    }
+}
+
+/// Cambia a una rama
+pub fn checkout_branch(branch: &str) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["checkout", branch])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("git checkout fallo: {}", stderr))
+    }
+}
+
 /// Genera un mensaje de commit usando Claude CLI
 pub fn generate_commit_message_with_claude() -> Result<String, String> {
     let diff = get_staged_diff();

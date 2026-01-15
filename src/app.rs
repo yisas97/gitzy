@@ -1,6 +1,6 @@
 // app.rs - Estado de la aplicacion
 
-use crate::git::{self, ChangedFile};
+use crate::git::{self, ChangedFile, LogEntry};
 
 /// Paneles de la aplicacion
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -14,6 +14,8 @@ pub enum Panel {
 pub enum Mode {
     Normal,   // Navegacion normal
     Commit,   // Escribiendo mensaje de commit
+    Log,      // Viendo historial de commits
+    Branches, // Seleccionando rama
 }
 
 /// Estado principal de la aplicacion
@@ -31,6 +33,12 @@ pub struct App {
     pub commit_message: String,
     pub cursor_position: usize,
     pub generating_ai: bool,  // Indica si estamos generando mensaje con AI
+    // Log
+    pub logs: Vec<LogEntry>,
+    pub log_selected: usize,
+    // Branches
+    pub branches: Vec<String>,
+    pub branch_selected: usize,
 }
 
 impl App {
@@ -56,6 +64,10 @@ impl App {
             commit_message: String::new(),
             cursor_position: 0,
             generating_ai: false,
+            logs: Vec::new(),
+            log_selected: 0,
+            branches: Vec::new(),
+            branch_selected: 0,
         }
     }
 
@@ -279,5 +291,90 @@ impl App {
     /// Limpia el mensaje despues de mostrarlo
     pub fn clear_message(&mut self) {
         self.message = None;
+    }
+
+    // === Funciones de Log ===
+
+    /// Entra en modo log
+    pub fn enter_log_mode(&mut self) {
+        self.logs = git::get_log(50);  // Ultimos 50 commits
+        self.log_selected = 0;
+        self.mode = Mode::Log;
+    }
+
+    /// Sale del modo log
+    pub fn exit_log_mode(&mut self) {
+        self.mode = Mode::Normal;
+    }
+
+    /// Navega hacia abajo en el log
+    pub fn log_next(&mut self) {
+        if !self.logs.is_empty() {
+            self.log_selected = (self.log_selected + 1) % self.logs.len();
+        }
+    }
+
+    /// Navega hacia arriba en el log
+    pub fn log_previous(&mut self) {
+        if !self.logs.is_empty() {
+            self.log_selected = self.log_selected
+                .checked_sub(1)
+                .unwrap_or(self.logs.len() - 1);
+        }
+    }
+
+    // === Funciones de Branches ===
+
+    /// Entra en modo branches
+    pub fn enter_branches_mode(&mut self) {
+        self.branches = git::get_branches();
+        // Seleccionar la rama actual
+        self.branch_selected = self.branches
+            .iter()
+            .position(|b| b == &self.branch)
+            .unwrap_or(0);
+        self.mode = Mode::Branches;
+    }
+
+    /// Sale del modo branches
+    pub fn exit_branches_mode(&mut self) {
+        self.mode = Mode::Normal;
+    }
+
+    /// Navega hacia abajo en branches
+    pub fn branch_next(&mut self) {
+        if !self.branches.is_empty() {
+            self.branch_selected = (self.branch_selected + 1) % self.branches.len();
+        }
+    }
+
+    /// Navega hacia arriba en branches
+    pub fn branch_previous(&mut self) {
+        if !self.branches.is_empty() {
+            self.branch_selected = self.branch_selected
+                .checked_sub(1)
+                .unwrap_or(self.branches.len() - 1);
+        }
+    }
+
+    /// Cambia a la rama seleccionada
+    pub fn checkout_selected_branch(&mut self) {
+        if let Some(branch) = self.branches.get(self.branch_selected) {
+            if branch == &self.branch {
+                self.message = Some("Ya estas en esa rama".to_string());
+                return;
+            }
+
+            match git::checkout_branch(branch) {
+                Ok(_) => {
+                    self.message = Some(format!("Cambiado a rama: {}", branch));
+                    self.exit_branches_mode();
+                    self.refresh();
+                }
+                Err(e) => {
+                    self.message = Some(format!("Error: {}", e));
+                }
+            }
+        }
     }
 }

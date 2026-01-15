@@ -71,6 +71,25 @@ fn main() -> Result<()> {
                             _ => {}
                         }
                     }
+                    app::Mode::Log => {
+                        // Modo log: navegar historial
+                        match key.code {
+                            KeyCode::Esc | KeyCode::Char('q') => app.exit_log_mode(),
+                            KeyCode::Char('j') | KeyCode::Down => app.log_next(),
+                            KeyCode::Char('k') | KeyCode::Up => app.log_previous(),
+                            _ => {}
+                        }
+                    }
+                    app::Mode::Branches => {
+                        // Modo branches: seleccionar rama
+                        match key.code {
+                            KeyCode::Esc | KeyCode::Char('q') => app.exit_branches_mode(),
+                            KeyCode::Char('j') | KeyCode::Down => app.branch_next(),
+                            KeyCode::Char('k') | KeyCode::Up => app.branch_previous(),
+                            KeyCode::Enter | KeyCode::Char(' ') => app.checkout_selected_branch(),
+                            _ => {}
+                        }
+                    }
                     app::Mode::Normal => {
                         // Modo normal: navegacion y comandos
                         match key.code {
@@ -103,6 +122,10 @@ fn main() -> Result<()> {
                             KeyCode::Char('u') => app.unstage_all(),
                             KeyCode::Char('d') => app.discard_selected(),
                             KeyCode::Char('c') => app.enter_commit_mode(),
+
+                            // Log y Branches
+                            KeyCode::Char('g') => app.enter_log_mode(),      // g = git log
+                            KeyCode::Char('b') => app.enter_branches_mode(), // b = branches
 
                             // Refrescar
                             KeyCode::Char('r') => app.refresh(),

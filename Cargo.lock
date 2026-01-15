@@ -381,6 +381,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "guit"
+version = "0.1.0"
+dependencies = [
+ "crossterm",
+ "ratatui",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1199,14 +1207,6 @@ dependencies = [
  "wezterm-dynamic",
  "wezterm-input-types",
  "winapi",
-]
-
-[[package]]
-name = "tgit"
-version = "0.1.0"
-dependencies = [
- "crossterm",
- "ratatui",
 ]
 
 [[package]]

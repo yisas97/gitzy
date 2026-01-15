@@ -23,9 +23,12 @@ pub fn render(frame: &mut Frame, app: &App) {
     render_content(frame, app, main_chunks[1]);
     render_footer(frame, app, main_chunks[2]);
 
-    // Mostrar popup de commit si estamos en ese modo
-    if app.mode == Mode::Commit {
-        render_commit_popup(frame, app);
+    // Mostrar popups segun el modo
+    match app.mode {
+        Mode::Commit => render_commit_popup(frame, app),
+        Mode::Log => render_log_popup(frame, app),
+        Mode::Branches => render_branches_popup(frame, app),
+        Mode::Normal => {}
     }
 }
 
@@ -208,7 +211,7 @@ fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
     let help_text = if let Some(msg) = &app.message {
         msg.clone()
     } else {
-        "q:Salir  j/k:Navegar  Tab:Panel  Space:Stage  c:Commit  a:StageAll  u:UnstageAll  d:Discard  r:Refresh".to_string()
+        "q:Salir  j/k:Nav  Space:Stage  c:Commit  g:Log  b:Ramas  a:All  u:Unstage  d:Discard  r:Refresh".to_string()
     };
 
     let footer = Paragraph::new(help_text)
@@ -308,6 +311,141 @@ fn render_commit_popup(frame: &mut Frame, app: &App) {
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Center);
     frame.render_widget(help, popup_chunks[5]);
+}
+
+/// Popup para ver el historial de commits
+fn render_log_popup(frame: &mut Frame, app: &App) {
+    let area = frame.area();
+
+    // Calcular area del popup (casi toda la pantalla)
+    let popup_width = (area.width - 4).min(100);
+    let popup_height = (area.height - 4).min(30);
+    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Limpiar area
+    frame.render_widget(Clear, popup_area);
+
+    // Crear items del log
+    let items: Vec<ListItem> = app.logs
+        .iter()
+        .enumerate()
+        .map(|(idx, log)| {
+            let is_selected = idx == app.log_selected;
+            let selector = if is_selected { ">> " } else { "   " };
+
+            let style = if is_selected {
+                Style::default().bg(Color::DarkGray).bold()
+            } else {
+                Style::default()
+            };
+
+            ListItem::new(Line::from(vec![
+                Span::styled(selector, Style::default().fg(Color::Cyan)),
+                Span::styled(&log.hash, Style::default().fg(Color::Yellow)),
+                Span::styled(" ", Style::default()),
+                Span::styled(&log.message, style.fg(Color::White)),
+                Span::styled(" - ", Style::default().fg(Color::DarkGray)),
+                Span::styled(&log.author, Style::default().fg(Color::Green)),
+                Span::styled(" (", Style::default().fg(Color::DarkGray)),
+                Span::styled(&log.date, Style::default().fg(Color::Cyan)),
+                Span::styled(")", Style::default().fg(Color::DarkGray)),
+            ]))
+        })
+        .collect();
+
+    let items = if items.is_empty() {
+        vec![ListItem::new(Line::from(vec![
+            Span::styled("  No hay commits", Style::default().fg(Color::DarkGray)),
+        ]))]
+    } else {
+        items
+    };
+
+    let list = List::new(items)
+        .block(Block::default()
+            .title(format!(" Log - {} commits ", app.logs.len()))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Magenta))
+            .style(Style::default().bg(Color::Black)));
+
+    frame.render_widget(list, popup_area);
+
+    // Ayuda en la parte inferior
+    let help_area = Rect::new(popup_x, popup_y + popup_height - 1, popup_width, 1);
+    let help = Paragraph::new(" j/k: Navegar | Esc: Cerrar ")
+        .style(Style::default().fg(Color::DarkGray))
+        .alignment(Alignment::Center);
+    frame.render_widget(help, help_area);
+}
+
+/// Popup para seleccionar rama
+fn render_branches_popup(frame: &mut Frame, app: &App) {
+    let area = frame.area();
+
+    // Calcular area del popup
+    let popup_width = 50.min(area.width.saturating_sub(4));
+    let popup_height = (app.branches.len() as u16 + 4).min(area.height.saturating_sub(4)).max(6);
+    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Limpiar area
+    frame.render_widget(Clear, popup_area);
+
+    // Crear items de branches
+    let items: Vec<ListItem> = app.branches
+        .iter()
+        .enumerate()
+        .map(|(idx, branch)| {
+            let is_selected = idx == app.branch_selected;
+            let is_current = branch == &app.branch;
+
+            let selector = if is_selected { ">> " } else { "   " };
+            let current_marker = if is_current { " *" } else { "" };
+
+            let style = if is_selected {
+                Style::default().bg(Color::DarkGray).bold()
+            } else if is_current {
+                Style::default().fg(Color::Green).bold()
+            } else {
+                Style::default().fg(Color::White)
+            };
+
+            ListItem::new(Line::from(vec![
+                Span::styled(selector, Style::default().fg(Color::Cyan)),
+                Span::styled(branch, style),
+                Span::styled(current_marker, Style::default().fg(Color::Green)),
+            ]))
+        })
+        .collect();
+
+    let items = if items.is_empty() {
+        vec![ListItem::new(Line::from(vec![
+            Span::styled("  No hay ramas", Style::default().fg(Color::DarkGray)),
+        ]))]
+    } else {
+        items
+    };
+
+    let list = List::new(items)
+        .block(Block::default()
+            .title(format!(" Ramas ({}) ", app.branches.len()))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Yellow))
+            .style(Style::default().bg(Color::Black)));
+
+    frame.render_widget(list, popup_area);
+
+    // Ayuda
+    let help_area = Rect::new(popup_x, popup_y + popup_height - 1, popup_width, 1);
+    let help = Paragraph::new(" j/k: Navegar | Enter: Cambiar | Esc: Cerrar ")
+        .style(Style::default().fg(Color::DarkGray))
+        .alignment(Alignment::Center);
+    frame.render_widget(help, help_area);
 }
 
 /// Obtiene el icono segun el estado del archivo
