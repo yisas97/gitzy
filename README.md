@@ -1,182 +1,184 @@
 # guit
 
-> Cliente Git TUI (Terminal User Interface) minimalista con soporte para AI
+> Minimalist Git TUI (Terminal User Interface) client with AI support
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org)
 
-**guit** es una interfaz de terminal intuitiva y ligera para Git que te permite gestionar tus repositorios sin salir de la línea de comandos. Navega por cambios, stage archivos, visualiza diffs, administra ramas y crea commits, todo desde una interfaz elegante basada en texto.
+*Leer en [Español](README.es.md)*
 
-## Características
+**guit** is an intuitive and lightweight terminal interface for Git that lets you manage your repositories without leaving the command line. Navigate changes, stage files, view diffs, manage branches, and create commits, all from an elegant text-based interface.
 
-- **Navegación intuitiva**: Usa atajos de teclado estilo Vim para moverte rápidamente
-- **Vista de cambios en tiempo real**: Visualiza archivos modificados, staged y unstaged
-- **Diff integrado**: Panel lateral con resaltado de diferencias
-- **Gestión de stage**: Stage/unstage archivos individuales o todos a la vez
-- **Commits interactivos**: Escribe mensajes de commit directamente en la interfaz
-- **Soporte para AI**: Genera mensajes de commit automáticamente (Tab en modo commit)
-- **Historial de commits**: Explora el log de Git sin salir de la aplicación
-- **Gestión de ramas**: Cambia entre ramas o crea nuevas desde la interfaz
-- **Ligero y rápido**: Construido en Rust con dependencias mínimas
+## Features
 
-## Instalación
+- **Intuitive navigation**: Use Vim-style keyboard shortcuts to move quickly
+- **Real-time change view**: Visualize modified, staged, and unstaged files
+- **Integrated diff**: Side panel with difference highlighting
+- **Stage management**: Stage/unstage individual files or all at once
+- **Interactive commits**: Write commit messages directly in the interface
+- **AI support**: Automatically generate commit messages (Tab in commit mode)
+- **Commit history**: Explore Git log without leaving the application
+- **Branch management**: Switch between branches or create new ones from the interface
+- **Lightweight and fast**: Built in Rust with minimal dependencies
 
-### Descargar binarios precompilados
+## Installation
 
-Descarga la versión más reciente desde [Releases](https://github.com/yisas97/guit/releases):
+### Download precompiled binaries
 
-| Plataforma | Archivo |
-|------------|---------|
+Download the latest version from [Releases](https://github.com/yisas97/guit/releases):
+
+| Platform | File |
+|----------|------|
 | Windows x64 | `guit-windows-x64.exe` |
 | Linux x64 | `guit-linux-x64` |
 | macOS Intel | `guit-macos-x64` |
 | macOS Apple Silicon | `guit-macos-arm64` |
 
-**Linux/macOS:** Después de descargar, dale permisos de ejecución:
+**Linux/macOS:** After downloading, give it execution permissions:
 ```bash
 chmod +x guit-linux-x64
 ./guit-linux-x64
 ```
 
-### Desde el código fuente
+### From source
 
 ```bash
-# Clonar el repositorio
+# Clone the repository
 git clone https://github.com/yisas97/guit.git
 cd guit
 
-# Compilar e instalar
+# Build and install
 cargo install --path .
 ```
 
-### Requisitos
+### Requirements
 
-- Rust 1.70+ (edición 2021)
-- Git instalado en el sistema
+- Rust 1.70+ (2021 edition)
+- Git installed on the system
 
-## Uso
+## Usage
 
-Ejecuta `guit` dentro de cualquier repositorio Git:
+Run `guit` inside any Git repository:
 
 ```bash
-cd tu-proyecto-git
+cd your-git-project
 guit
 ```
 
-## Atajos de teclado
+## Keyboard shortcuts
 
-### Modo Normal
+### Normal Mode
 
-| Tecla | Acción |
-|-------|--------|
-| `j` / `↓` | Bajar en la lista de archivos |
-| `k` / `↑` | Subir en la lista de archivos |
-| `h` / `l` / `Tab` | Alternar entre paneles (archivos/diff) |
-| `Space` / `Enter` | Stage/unstage archivo seleccionado |
-| `a` | Stage todos los archivos |
-| `u` | Unstage todos los archivos |
-| `d` | Descartar cambios del archivo seleccionado |
-| `c` | Entrar al modo commit |
-| `g` | Ver historial de commits (git log) |
-| `b` | Ver y cambiar ramas |
-| `r` | Refrescar estado |
-| `PgUp` / `PgDn` | Scroll rápido en el diff |
-| `q` / `Esc` | Salir |
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move down in file list |
+| `k` / `↑` | Move up in file list |
+| `h` / `l` / `Tab` | Toggle between panels (files/diff) |
+| `Space` / `Enter` | Stage/unstage selected file |
+| `a` | Stage all files |
+| `u` | Unstage all files |
+| `d` | Discard changes of selected file |
+| `c` | Enter commit mode |
+| `g` | View commit history (git log) |
+| `b` | View and switch branches |
+| `r` | Refresh status |
+| `PgUp` / `PgDn` | Fast scroll in diff |
+| `q` / `Esc` | Quit |
 
-### Modo Commit
+### Commit Mode
 
-| Tecla | Acción |
-|-------|--------|
-| `Escribir` | Ingresar mensaje de commit |
-| `Tab` | Generar mensaje con AI |
-| `Enter` | Confirmar commit |
-| `Esc` | Cancelar y volver |
-| `Backspace` | Borrar carácter |
-| `←` / `→` | Mover cursor |
+| Key | Action |
+|-----|--------|
+| `Type` | Enter commit message |
+| `Tab` | Generate message with AI |
+| `Enter` | Confirm commit |
+| `Esc` | Cancel and return |
+| `Backspace` | Delete character |
+| `←` / `→` | Move cursor |
 
-### Modo Log
+### Log Mode
 
-| Tecla | Acción |
-|-------|--------|
-| `j` / `↓` | Siguiente commit |
-| `k` / `↑` | Commit anterior |
-| `q` / `Esc` | Volver al modo normal |
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Next commit |
+| `k` / `↑` | Previous commit |
+| `q` / `Esc` | Return to normal mode |
 
-### Modo Branches
+### Branches Mode
 
-| Tecla | Acción |
-|-------|--------|
-| `j` / `↓` | Siguiente rama |
-| `k` / `↑` | Rama anterior |
-| `Enter` / `Space` | Cambiar a rama seleccionada |
-| `n` | Crear nueva rama |
-| `q` / `Esc` | Volver al modo normal |
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Next branch |
+| `k` / `↑` | Previous branch |
+| `Enter` / `Space` | Switch to selected branch |
+| `n` | Create new branch |
+| `q` / `Esc` | Return to normal mode |
 
-### Modo Crear Rama
+### Create Branch Mode
 
-| Tecla | Acción |
-|-------|--------|
-| `Escribir` | Nombre de la nueva rama |
-| `Enter` | Crear rama |
-| `Esc` | Cancelar |
-| `Backspace` | Borrar carácter |
-| `←` / `→` | Mover cursor |
+| Key | Action |
+|-----|--------|
+| `Type` | New branch name |
+| `Enter` | Create branch |
+| `Esc` | Cancel |
+| `Backspace` | Delete character |
+| `←` / `→` | Move cursor |
 
-## Estructura del proyecto
+## Project structure
 
 ```
 guit/
 ├── src/
-│   ├── main.rs      # Punto de entrada y event loop
-│   ├── app.rs       # Lógica de estado de la aplicación
-│   ├── git.rs       # Interfaz con comandos Git
-│   └── ui.rs        # Renderizado de la interfaz TUI
-├── Cargo.toml       # Configuración del proyecto
-└── Cargo.lock       # Dependencias bloqueadas
+│   ├── main.rs      # Entry point and event loop
+│   ├── app.rs       # Application state logic
+│   ├── git.rs       # Git commands interface
+│   └── ui.rs        # TUI interface rendering
+├── Cargo.toml       # Project configuration
+└── Cargo.lock       # Locked dependencies
 ```
 
-## Dependencias
+## Dependencies
 
-- [ratatui](https://github.com/ratatui-org/ratatui) - Framework TUI para Rust
-- [crossterm](https://github.com/crossterm-rs/crossterm) - Manipulación de terminal multiplataforma
+- [ratatui](https://github.com/ratatui-org/ratatui) - TUI framework for Rust
+- [crossterm](https://github.com/crossterm-rs/crossterm) - Cross-platform terminal manipulation
 
-## Desarrollo
+## Development
 
 ```bash
-# Ejecutar en modo desarrollo
+# Run in development mode
 cargo run
 
-# Compilar versión optimizada
+# Build optimized version
 cargo build --release
 
-# Ejecutar tests
+# Run tests
 cargo test
 ```
 
 ## Roadmap
 
-- [ ] Integración completa con AI para generación de mensajes de commit
-- [ ] Soporte para resolución de conflictos de merge
-- [ ] Stash interactivo
-- [ ] Búsqueda y filtrado de archivos
-- [ ] Temas personalizables
-- [ ] Soporte para submodules
+- [ ] Full AI integration for commit message generation
+- [ ] Support for merge conflict resolution
+- [ ] Interactive stash
+- [ ] File search and filtering
+- [ ] Customizable themes
+- [ ] Submodules support
 
-## Contribuir
+## Contributing
 
-Las contribuciones son bienvenidas. Por favor:
+Contributions are welcome. Please:
 
-1. Haz fork del repositorio
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commitea tus cambios (`git commit -am 'Agrega nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
+1. Fork the repository
+2. Create a branch for your feature (`git checkout -b feature/new-feature`)
+3. Commit your changes (`git commit -am 'Add new feature'`)
+4. Push to the branch (`git push origin feature/new-feature`)
+5. Open a Pull Request
 
-## Licencia
+## License
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+This project is under the MIT License. See the `LICENSE` file for more details.
 
-## Autor
+## Author
 
 **Jesus Campos**
 
@@ -184,4 +186,4 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ---
 
-Construido con Rust
+Built with Rust
