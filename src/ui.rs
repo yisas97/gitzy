@@ -9,13 +9,16 @@ use crate::git::FileStatus;
 
 /// Renderiza toda la UI
 pub fn render(frame: &mut Frame, app: &App) {
+    // Calcular altura del footer segun el ancho
+    let footer_height = calculate_footer_height(frame.area().width);
+
     // Layout principal: header, contenido, footer
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Min(0),     // Contenido
-            Constraint::Length(3),  // Footer
+            Constraint::Length(3),           // Header
+            Constraint::Min(0),              // Contenido
+            Constraint::Length(footer_height), // Footer (dinamico)
         ])
         .split(frame.area());
 
@@ -221,15 +224,62 @@ fn render_diff(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(diff, area);
 }
 
-/// Footer con ayuda
+/// Calcula la altura del footer segun el ancho disponible
+fn calculate_footer_height(width: u16) -> u16 {
+    let content_width = width.saturating_sub(4) as usize; // Restar bordes
+    let commands = get_footer_commands();
+    let total_len: usize = commands.iter().map(|c| c.len() + 2).sum(); // +2 por espacios
+
+    if content_width == 0 {
+        return 3;
+    }
+
+    let lines_needed = (total_len + content_width - 1) / content_width;
+    (lines_needed as u16 + 2).min(6) // +2 por bordes, max 6 lineas
+}
+
+/// Obtiene la lista de comandos para el footer
+fn get_footer_commands() -> Vec<&'static str> {
+    vec![
+        "q:Salir", "j/k:Nav", "Space:Stage", "a:All", "u:Unstage",
+        "d:Discard", "c:Commit", "g:Log", "b:Ramas", "s:Remotes",
+        "p:Push", "P:Pull", "f:Fetch", "r:Refresh"
+    ]
+}
+
+/// Footer con ayuda (responsivo - crece en lineas)
 fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
-    let help_text = if let Some(msg) = &app.message {
+    let content = if let Some(msg) = &app.message {
         msg.clone()
     } else {
-        "q:Salir j/k:Nav Space:Stage a:All u:Unstage d:Discard c:Commit g:Log b:Ramas s:Remotes p:Push P:Pull f:Fetch r:Refresh".to_string()
+        // Calcular cuantos comandos caben por linea
+        let content_width = area.width.saturating_sub(4) as usize;
+        let commands = get_footer_commands();
+
+        let mut lines: Vec<String> = Vec::new();
+        let mut current_line = String::new();
+
+        for cmd in commands {
+            let separator = if current_line.is_empty() { "" } else { "  " };
+            let new_len = current_line.len() + separator.len() + cmd.len();
+
+            if new_len <= content_width || current_line.is_empty() {
+                current_line.push_str(separator);
+                current_line.push_str(cmd);
+            } else {
+                lines.push(current_line);
+                current_line = cmd.to_string();
+            }
+        }
+
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+
+        lines.join("\n")
     };
 
-    let footer = Paragraph::new(help_text)
+    let footer = Paragraph::new(content)
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Center)
         .block(Block::default()
