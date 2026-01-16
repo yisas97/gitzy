@@ -338,6 +338,31 @@ pub fn checkout_remote_branch(remote: &str, branch: &str) -> Result<(), String> 
     }
 }
 
+/// Hace merge de una rama hacia la rama actual
+pub fn merge_branch(branch: &str) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["merge", branch])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if output.status.success() {
+        if stdout.contains("Already up to date") {
+            Ok("Ya esta actualizado".to_string())
+        } else {
+            Ok(format!("Merge exitoso de {}", branch))
+        }
+    } else {
+        if stderr.contains("CONFLICT") || stdout.contains("CONFLICT") {
+            Err("Conflictos detectados. Resuelve manualmente.".to_string())
+        } else {
+            Err(format!("Merge fallo: {}", stderr))
+        }
+    }
+}
+
 /// Hace push de una rama local al remoto (con -u para tracking)
 pub fn push_branch_to_remote(remote: &str, branch: &str) -> Result<String, String> {
     let output = Command::new("git")

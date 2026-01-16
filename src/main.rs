@@ -91,7 +91,8 @@ fn main() -> Result<()> {
                                 app.exit_branches_mode();
                                 app.enter_create_branch_mode();
                             }
-                            KeyCode::Char('p') => app.push_selected_branch(), // Push rama al remote
+                            KeyCode::Char('p') => app.push_selected_branch(),  // Push rama al remote
+                            KeyCode::Char('m') => app.merge_selected_branch(), // Merge rama a la actual
                             _ => {}
                         }
                     }

@@ -464,6 +464,41 @@ impl App {
         }
     }
 
+    /// Merge de la rama seleccionada hacia la rama actual
+    pub fn merge_selected_branch(&mut self) {
+        if let Some(branch_info) = self.branches.get(self.branch_selected) {
+            if branch_info.is_current {
+                self.message = Some("No puedes hacer merge de la rama actual".to_string());
+                return;
+            }
+
+            // Para ramas remotas, usar el nombre completo remote/branch
+            let branch_to_merge = if branch_info.is_remote {
+                if let Some(ref remote) = branch_info.remote_name {
+                    format!("{}/{}", remote, branch_info.name)
+                } else {
+                    branch_info.name.clone()
+                }
+            } else {
+                branch_info.name.clone()
+            };
+
+            self.message = Some(format!("Merging {} en {}...", branch_to_merge, self.branch));
+
+            match git::merge_branch(&branch_to_merge) {
+                Ok(msg) => {
+                    self.message = Some(msg);
+                    self.exit_branches_mode();
+                    self.refresh();
+                }
+                Err(e) => {
+                    self.message = Some(format!("Error: {}", e));
+                    self.refresh(); // Refrescar para mostrar archivos con conflictos
+                }
+            }
+        }
+    }
+
     // === Funciones de Create Branch ===
 
     /// Entra en modo crear rama

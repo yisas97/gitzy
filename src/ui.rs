@@ -529,7 +529,7 @@ fn render_branches_popup(frame: &mut Frame, app: &App) {
 
     // Ayuda
     let help_area = Rect::new(popup_x, popup_y + popup_height - 1, popup_width, 1);
-    let help = Paragraph::new(" j/k:Nav Enter:Cambiar n:Nueva p:Push Esc:Cerrar ")
+    let help = Paragraph::new(" j/k:Nav Enter:Cambiar n:Nueva m:Merge p:Push Esc:Cerrar ")
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Center);
     frame.render_widget(help, help_area);
