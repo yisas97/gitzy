@@ -54,12 +54,16 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect) {
         String::new()
     };
 
+    // Indicador de proveedor AI
+    let ai_indicator = format!("[AI:{}]", app.ai_config.provider.short_name());
+
     let header_text = format!(
-        " gitzy   {}{}   {} staged, {} unstaged",
+        " gitzy   {}{}   {} staged, {} unstaged  {}",
         app.branch,
         sync_indicator,
         staged_count,
-        status_count
+        status_count,
+        ai_indicator
     );
 
     let header = Paragraph::new(header_text)
@@ -295,7 +299,7 @@ fn render_commit_popup(frame: &mut Frame, app: &App) {
 
     // Calcular area del popup (centrado)
     let popup_width = 70.min(area.width.saturating_sub(4));
-    let popup_height = 12;
+    let popup_height = 14;  // Aumentado para input mas alto
     let popup_x = (area.width.saturating_sub(popup_width)) / 2;
     let popup_y = (area.height.saturating_sub(popup_height)) / 2;
 
@@ -310,7 +314,7 @@ fn render_commit_popup(frame: &mut Frame, app: &App) {
         .constraints([
             Constraint::Length(1),  // Info
             Constraint::Length(1),  // Espacio
-            Constraint::Length(3),  // Input
+            Constraint::Length(5),  // Input (5 lineas para wrap)
             Constraint::Length(1),  // Espacio
             Constraint::Length(1),  // Boton AI
             Constraint::Min(0),     // Ayuda
@@ -333,10 +337,11 @@ fn render_commit_popup(frame: &mut Frame, app: &App) {
     frame.render_widget(info, popup_chunks[0]);
 
     // Input del mensaje
+    let provider_name = app.ai_config.provider.display_name();
     let input_text = if app.generating_ai {
-        "Generando con Claude AI...".to_string()
+        format!("Generando con {}...", provider_name)
     } else if app.commit_message.is_empty() {
-        "Escribe tu mensaje o presiona Tab para generar con AI...".to_string()
+        "Escribe tu mensaje o presiona Tab para AI...".to_string()
     } else {
         app.commit_message.clone()
     };
@@ -349,30 +354,39 @@ fn render_commit_popup(frame: &mut Frame, app: &App) {
         Style::default().fg(Color::White)
     };
 
-    let input = Paragraph::new(input_text)
+    // Ancho interno del input (sin bordes)
+    let input_inner_width = popup_chunks[2].width.saturating_sub(2) as usize;
+
+    let input = Paragraph::new(input_text.clone())
         .style(input_style)
+        .wrap(Wrap { trim: false })  // Wrap para texto largo
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Yellow))
             .title(" Mensaje "));
     frame.render_widget(input, popup_chunks[2]);
 
-    // Posicionar cursor (solo si no esta generando)
+    // Posicionar cursor considerando wrap
     if !app.generating_ai && (!app.commit_message.is_empty() || app.cursor_position == 0) {
-        frame.set_cursor_position((
-            popup_chunks[2].x + app.cursor_position as u16 + 1,
-            popup_chunks[2].y + 1,
-        ));
+        let cursor_pos = app.cursor_position;
+        if input_inner_width > 0 {
+            let cursor_y = cursor_pos / input_inner_width;
+            let cursor_x = cursor_pos % input_inner_width;
+            frame.set_cursor_position((
+                popup_chunks[2].x + cursor_x as u16 + 1,
+                popup_chunks[2].y + cursor_y as u16 + 1,
+            ));
+        }
     }
 
     // Boton AI
-    let ai_button = Paragraph::new("[ Tab ] Generar mensaje con Claude AI")
+    let ai_button = Paragraph::new(format!("[ Tab ] {} | [ i ] Cambiar AI", provider_name))
         .style(Style::default().fg(Color::Magenta))
         .alignment(Alignment::Center);
     frame.render_widget(ai_button, popup_chunks[4]);
 
     // Ayuda
-    let help = Paragraph::new("Enter: Confirmar | Esc: Cancelar | Tab: AI")
+    let help = Paragraph::new("Enter: Confirmar | Esc: Cancelar")
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Center);
     frame.render_widget(help, popup_chunks[5]);

@@ -1,5 +1,6 @@
 // app.rs - Estado de la aplicacion
 
+use crate::ai::AiConfig;
 use crate::git::{self, ChangedFile, LogEntry, RemoteInfo, BranchInfo};
 
 /// Paneles de la aplicacion
@@ -37,6 +38,7 @@ pub struct App {
     pub commit_message: String,
     pub cursor_position: usize,
     pub generating_ai: bool,  // Indica si estamos generando mensaje con AI
+    pub ai_config: AiConfig,  // Configuracion de proveedores de IA
     // Log
     pub logs: Vec<LogEntry>,
     pub log_selected: usize,
@@ -86,6 +88,7 @@ impl App {
             commit_message: String::new(),
             cursor_position: 0,
             generating_ai: false,
+            ai_config: AiConfig::from_env(),
             logs: Vec::new(),
             log_selected: 0,
             branches: Vec::new(),
@@ -303,22 +306,30 @@ impl App {
         }
     }
 
-    /// Genera mensaje de commit con Claude AI
+    /// Genera mensaje de commit con el proveedor de AI configurado
     pub fn generate_commit_with_ai(&mut self) {
         self.generating_ai = true;
-        self.message = Some("Generando mensaje con Claude...".to_string());
+        let provider_name = self.ai_config.provider.display_name();
+        self.message = Some(format!("Generando mensaje con {}...", provider_name));
 
-        match git::generate_commit_message_with_claude() {
+        match self.ai_config.provider.generate_commit_message(&self.ai_config) {
             Ok(msg) => {
                 self.commit_message = msg;
                 self.cursor_position = self.commit_message.len();
-                self.message = Some("Mensaje generado con AI".to_string());
+                self.message = Some(format!("Mensaje generado con {}", provider_name));
             }
             Err(e) => {
-                self.message = Some(format!("Error AI: {}", e));
+                self.message = Some(format!("Error {}: {}", provider_name, e));
             }
         }
         self.generating_ai = false;
+    }
+
+    /// Cicla al siguiente proveedor de AI
+    pub fn cycle_ai_provider(&mut self) {
+        self.ai_config.cycle_provider();
+        let provider = self.ai_config.provider.display_name();
+        self.message = Some(format!("Proveedor AI: {}", provider));
     }
 
     pub fn quit(&mut self) {

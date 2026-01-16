@@ -1,5 +1,6 @@
 // main.rs - Punto de entrada de gitzy
 
+mod ai;
 mod app;
 mod git;
 mod ui;
@@ -67,6 +68,10 @@ fn main() -> Result<()> {
                             KeyCode::Left => app.commit_cursor_left(),
                             KeyCode::Right => app.commit_cursor_right(),
                             KeyCode::Tab => app.generate_commit_with_ai(),
+                            // 'i' cambia el proveedor de AI (solo si el mensaje esta vacio)
+                            KeyCode::Char('i') if app.commit_message.is_empty() => {
+                                app.cycle_ai_provider();
+                            }
                             KeyCode::Char(c) => app.commit_input_char(c),
                             _ => {}
                         }
