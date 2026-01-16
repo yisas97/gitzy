@@ -110,6 +110,12 @@ impl App {
 
     /// Refresca la lista de archivos desde git
     pub fn refresh(&mut self) {
+        self.refresh_silent();
+        self.message = Some("Refrescado".to_string());
+    }
+
+    /// Refresca sin cambiar el mensaje actual
+    pub fn refresh_silent(&mut self) {
         self.files = git::get_changed_files();
         self.branch = git::get_current_branch();
         let (ahead, behind) = git::get_ahead_behind();
@@ -122,7 +128,6 @@ impl App {
         }
 
         self.update_diff();
-        self.message = Some("Refrescado".to_string());
     }
 
     /// Mueve la seleccion hacia abajo
@@ -296,12 +301,13 @@ impl App {
 
         match git::commit(&self.commit_message) {
             Ok(_) => {
-                self.message = Some(format!("Commit exitoso: {}", self.commit_message));
+                let msg = self.commit_message.clone();
                 self.exit_commit_mode();
-                self.refresh();
+                self.refresh_silent();
+                self.message = Some(format!("Commit: {}", msg));
             }
             Err(e) => {
-                self.message = Some(format!("Error en commit: {}", e));
+                self.message = Some(format!("Error: {}", e));
             }
         }
     }

@@ -105,20 +105,21 @@ impl AiConfig {
 /// Genera el prompt para todos los proveedores
 pub fn get_commit_prompt(diff: &str) -> String {
     format!(
-        "Genera UN SOLO mensaje de commit en espanol para estos cambios.
+        "Genera un mensaje de commit corto en espanol.
 
-REGLAS ESTRICTAS:
-- Responde SOLO con el mensaje, nada mas
-- Maximo 50 caracteres
-- Formato: tipo: descripcion breve
-- Tipos validos: feat, fix, docs, style, refactor, test, chore
-- Sin explicaciones, sin markdown, sin comillas
-- Usa verbos en infinitivo (agregar, corregir, actualizar)
+IMPORTANTE - Solo responde con UNA linea asi:
+tipo: descripcion
 
-Ejemplos correctos:
-feat: agregar autenticacion JWT
-fix: corregir error en validacion
-refactor: simplificar logica de parseo
+Reglas:
+- Maximo 50 caracteres en total
+- tipos: feat|fix|docs|refactor|chore
+- Sin cuerpo, sin explicaciones
+- Verbo infinitivo (agregar, corregir)
+
+Ejemplos:
+feat: agregar login
+fix: corregir validacion
+refactor: simplificar parseo
 
 Diff:
 {}",
@@ -129,32 +130,32 @@ Diff:
 /// Limpia la respuesta de los proveedores AI
 pub fn clean_ai_response(response: &str) -> String {
     let response = response.trim();
-
-    // Buscar linea que parece mensaje de commit (tipo: descripcion)
     let commit_types = ["feat:", "fix:", "docs:", "style:", "refactor:", "test:", "chore:"];
 
+    // Buscar primera linea que parece mensaje de commit
     for line in response.lines() {
-        let line = line.trim();
-        // Remover comillas si las tiene
-        let line = line.trim_matches('"').trim_matches('\'').trim_matches('`');
+        let line = line.trim()
+            .trim_matches('"')
+            .trim_matches('\'')
+            .trim_matches('`')
+            .trim_start_matches("- ");
 
         for commit_type in &commit_types {
             if line.to_lowercase().starts_with(commit_type) {
-                // Encontramos una linea valida, truncar a 72 chars
-                let clean = line.chars().take(72).collect::<String>();
-                return clean;
+                // Solo tomar hasta el primer salto de linea y truncar a 50 chars
+                return line.chars().take(50).collect();
             }
         }
     }
 
-    // Si no encontramos formato valido, tomar primera linea no vacia y truncar
+    // Fallback: primera linea no vacia, truncar a 50 chars
     response
         .lines()
         .map(|l| l.trim().trim_matches('"').trim_matches('\'').trim_matches('`'))
         .find(|l| !l.is_empty() && !l.starts_with("```") && !l.starts_with('#'))
         .unwrap_or(response)
         .chars()
-        .take(72)
+        .take(50)
         .collect()
 }
 
