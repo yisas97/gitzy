@@ -126,10 +126,9 @@ Diff:
 
 /// Limpia la respuesta de los proveedores AI
 pub fn clean_ai_response(response: &str) -> String {
-    let response = response.trim();
     let commit_types = ["feat:", "fix:", "docs:", "style:", "refactor:", "test:", "chore:"];
 
-    // Buscar primera linea que parece mensaje de commit
+    // Buscar linea que empiece con un tipo de commit valido
     for line in response.lines() {
         let line = line.trim()
             .trim_matches('"')
@@ -137,23 +136,31 @@ pub fn clean_ai_response(response: &str) -> String {
             .trim_matches('`')
             .trim_start_matches("- ");
 
+        let line_lower = line.to_lowercase();
+
         for commit_type in &commit_types {
-            if line.to_lowercase().starts_with(commit_type) {
-                // Solo tomar hasta el primer salto de linea y truncar a 50 chars
+            if line_lower.starts_with(commit_type) {
                 return line.chars().take(50).collect();
             }
         }
     }
 
-    // Fallback: primera linea no vacia, truncar a 50 chars
-    response
+    // Fallback: tomar la ultima linea no vacia
+    let last_line = response
         .lines()
-        .map(|l| l.trim().trim_matches('"').trim_matches('\'').trim_matches('`'))
-        .find(|l| !l.is_empty() && !l.starts_with("```") && !l.starts_with('#'))
-        .unwrap_or(response)
+        .rev()
+        .map(|l| l.trim())
+        .find(|l| !l.is_empty())
+        .unwrap_or("")
         .chars()
         .take(50)
-        .collect()
+        .collect::<String>();
+
+    if last_line.is_empty() {
+        "chore: actualizar codigo".to_string()
+    } else {
+        format!("chore: {}", last_line.chars().take(43).collect::<String>())
+    }
 }
 
 /// Obtiene el diff staged y lo limita si es muy largo
