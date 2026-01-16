@@ -1,4 +1,68 @@
+# Rust
 /target
+Cargo.lock
+**/*.rs.bk
+*.pdb
 
-# Archivos temporales de Claude CLI
+# IDEs y Editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Sistema Operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Entorno y configuracion local
+.env
+.env.local
+*.local
+
+# Logs
+*.log
+logs/
+
+# AI Assistants
+# Claude Code
+CLAUDE.md
 tmpclaude-*
+nul
+
+# Gemini
+GEMINI.md
+.gemini/
+
+# Cursor
+.cursor/
+.cursorignore
+.cursorindexingignore
+
+# Aider
+.aider*
+.aiderignore
+
+# GitHub Copilot
+.copilot/
+
+# Codeium
+.codeium/
+
+# Cobertura y tests
+*.profraw
+*.profdata
+coverage/
+tarpaulin-report.html
+
+# Documentacion generada
+/doc/
