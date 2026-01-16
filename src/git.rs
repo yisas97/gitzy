@@ -189,13 +189,24 @@ pub fn commit(message: &str) -> Result<(), String> {
     let output = Command::new("git")
         .args(["commit", "-m", message])
         .output()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("No se pudo ejecutar git: {}", e))?;
 
     if output.status.success() {
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("git commit fallo: {}", stderr))
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        // Git a veces pone mensajes en stdout en lugar de stderr
+        let error_msg = if !stderr.trim().is_empty() {
+            stderr.trim().to_string()
+        } else if !stdout.trim().is_empty() {
+            stdout.trim().to_string()
+        } else {
+            format!("codigo de salida: {:?}", output.status.code())
+        };
+
+        Err(error_msg)
     }
 }
 
