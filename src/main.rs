@@ -91,6 +91,7 @@ fn main() -> Result<()> {
                                 app.exit_branches_mode();
                                 app.enter_create_branch_mode();
                             }
+                            KeyCode::Char('p') => app.push_selected_branch(), // Push rama al remote
                             _ => {}
                         }
                     }

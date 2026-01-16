@@ -250,20 +250,108 @@ pub fn get_log(limit: usize) -> Vec<LogEntry> {
     }
 }
 
-/// Obtiene la lista de ramas locales
-pub fn get_branches() -> Vec<String> {
-    let output = Command::new("git")
-        .args(["branch", "--format=%(refname:short)"])
-        .output();
+/// Información de una rama
+#[derive(Debug, Clone)]
+pub struct BranchInfo {
+    pub name: String,
+    pub is_remote: bool,
+    pub is_current: bool,
+    pub remote_name: Option<String>, // ej: "origin" para origin/main
+}
 
-    match output {
-        Ok(o) => {
-            String::from_utf8_lossy(&o.stdout)
-                .lines()
-                .map(|s| s.to_string())
-                .collect()
+/// Obtiene todas las ramas (locales y remotas)
+pub fn get_all_branches() -> Vec<BranchInfo> {
+    let mut branches = Vec::new();
+    let current = get_current_branch();
+
+    // Ramas locales
+    if let Ok(output) = Command::new("git")
+        .args(["branch", "--format=%(refname:short)"])
+        .output()
+    {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines() {
+            if !line.is_empty() {
+                branches.push(BranchInfo {
+                    name: line.to_string(),
+                    is_remote: false,
+                    is_current: line == current,
+                    remote_name: None,
+                });
+            }
         }
-        Err(_) => Vec::new(),
+    }
+
+    // Ramas remotas
+    if let Ok(output) = Command::new("git")
+        .args(["branch", "-r", "--format=%(refname:short)"])
+        .output()
+    {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines() {
+            // Ignorar HEAD -> origin/main
+            if line.is_empty() || line.contains("HEAD") {
+                continue;
+            }
+            // Extraer nombre del remote y la rama (origin/main -> remote=origin, name=main)
+            let parts: Vec<&str> = line.splitn(2, '/').collect();
+            if parts.len() == 2 {
+                let remote = parts[0].to_string();
+                let branch_name = parts[1].to_string();
+
+                // No agregar si ya existe como rama local
+                let exists_local = branches.iter().any(|b| !b.is_remote && b.name == branch_name);
+                if !exists_local {
+                    branches.push(BranchInfo {
+                        name: branch_name,
+                        is_remote: true,
+                        is_current: false,
+                        remote_name: Some(remote),
+                    });
+                }
+            }
+        }
+    }
+
+    branches
+}
+
+/// Hace checkout de una rama remota (crea rama local con tracking)
+pub fn checkout_remote_branch(remote: &str, branch: &str) -> Result<(), String> {
+    // git checkout -b <branch> <remote>/<branch>
+    let remote_ref = format!("{}/{}", remote, branch);
+    let output = Command::new("git")
+        .args(["checkout", "-b", branch, &remote_ref])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Si la rama ya existe, intentar checkout normal
+        if stderr.contains("already exists") {
+            checkout_branch(branch)
+        } else {
+            Err(format!("git checkout fallo: {}", stderr))
+        }
+    }
+}
+
+/// Hace push de una rama local al remoto (con -u para tracking)
+pub fn push_branch_to_remote(remote: &str, branch: &str) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["push", "-u", remote, branch])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Ok(format!("{}{}", stdout, stderr).trim().to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("git push fallo: {}", stderr))
     }
 }
 
@@ -345,17 +433,6 @@ pub fn get_remotes() -> Vec<RemoteInfo> {
         }
         Err(_) => Vec::new(),
     }
-}
-
-/// Obtiene la URL de un remote específico
-#[allow(dead_code)]
-pub fn get_remote_url(name: &str) -> Option<String> {
-    Command::new("git")
-        .args(["remote", "get-url", name])
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
 }
 
 /// Cambia la URL de un remote

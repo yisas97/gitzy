@@ -450,9 +450,13 @@ fn render_log_popup(frame: &mut Frame, app: &App) {
 fn render_branches_popup(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
+    // Contar ramas locales y remotas
+    let local_count = app.branches.iter().filter(|b| !b.is_remote).count();
+    let remote_count = app.branches.iter().filter(|b| b.is_remote).count();
+
     // Calcular area del popup
-    let popup_width = 50.min(area.width.saturating_sub(4));
-    let popup_height = (app.branches.len() as u16 + 4).min(area.height.saturating_sub(4)).max(6);
+    let popup_width = 60.min(area.width.saturating_sub(4));
+    let popup_height = (app.branches.len() as u16 + 5).min(area.height.saturating_sub(4)).max(8);
     let popup_x = (area.width.saturating_sub(popup_width)) / 2;
     let popup_y = (area.height.saturating_sub(popup_height)) / 2;
 
@@ -467,22 +471,40 @@ fn render_branches_popup(frame: &mut Frame, app: &App) {
         .enumerate()
         .map(|(idx, branch)| {
             let is_selected = idx == app.branch_selected;
-            let is_current = branch == &app.branch;
 
             let selector = if is_selected { ">> " } else { "   " };
-            let current_marker = if is_current { " *" } else { "" };
+
+            // Indicadores
+            let (type_indicator, type_color) = if branch.is_remote {
+                ("R", Color::Magenta) // Remote
+            } else {
+                ("L", Color::Blue)    // Local
+            };
+
+            let current_marker = if branch.is_current { " *" } else { "" };
+
+            // Remote name si es remota
+            let remote_info = if let Some(ref remote) = branch.remote_name {
+                format!(" ({})", remote)
+            } else {
+                String::new()
+            };
 
             let style = if is_selected {
                 Style::default().bg(Color::DarkGray).bold()
-            } else if is_current {
+            } else if branch.is_current {
                 Style::default().fg(Color::Green).bold()
+            } else if branch.is_remote {
+                Style::default().fg(Color::Magenta)
             } else {
                 Style::default().fg(Color::White)
             };
 
             ListItem::new(Line::from(vec![
                 Span::styled(selector, Style::default().fg(Color::Cyan)),
-                Span::styled(branch, style),
+                Span::styled(format!("[{}] ", type_indicator), Style::default().fg(type_color)),
+                Span::styled(&branch.name, style),
+                Span::styled(remote_info, Style::default().fg(Color::DarkGray)),
                 Span::styled(current_marker, Style::default().fg(Color::Green)),
             ]))
         })
@@ -490,7 +512,7 @@ fn render_branches_popup(frame: &mut Frame, app: &App) {
 
     let items = if items.is_empty() {
         vec![ListItem::new(Line::from(vec![
-            Span::styled("  No hay ramas", Style::default().fg(Color::DarkGray)),
+            Span::styled("  No hay ramas (ejecuta fetch primero)", Style::default().fg(Color::DarkGray)),
         ]))]
     } else {
         items
@@ -498,7 +520,7 @@ fn render_branches_popup(frame: &mut Frame, app: &App) {
 
     let list = List::new(items)
         .block(Block::default()
-            .title(format!(" Ramas ({}) ", app.branches.len()))
+            .title(format!(" Ramas - {} locales, {} remotas ", local_count, remote_count))
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Yellow))
             .style(Style::default().bg(Color::Black)));
@@ -507,7 +529,7 @@ fn render_branches_popup(frame: &mut Frame, app: &App) {
 
     // Ayuda
     let help_area = Rect::new(popup_x, popup_y + popup_height - 1, popup_width, 1);
-    let help = Paragraph::new(" j/k: Nav | Enter: Cambiar | n: Nueva | Esc: Cerrar ")
+    let help = Paragraph::new(" j/k:Nav Enter:Cambiar n:Nueva p:Push Esc:Cerrar ")
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Center);
     frame.render_widget(help, help_area);

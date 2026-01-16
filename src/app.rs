@@ -1,6 +1,6 @@
 // app.rs - Estado de la aplicacion
 
-use crate::git::{self, ChangedFile, LogEntry, RemoteInfo};
+use crate::git::{self, ChangedFile, LogEntry, RemoteInfo, BranchInfo};
 
 /// Paneles de la aplicacion
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -41,7 +41,7 @@ pub struct App {
     pub logs: Vec<LogEntry>,
     pub log_selected: usize,
     // Branches
-    pub branches: Vec<String>,
+    pub branches: Vec<BranchInfo>,
     pub branch_selected: usize,
     // Create Branch
     pub new_branch_name: String,
@@ -364,11 +364,11 @@ impl App {
 
     /// Entra en modo branches
     pub fn enter_branches_mode(&mut self) {
-        self.branches = git::get_branches();
+        self.branches = git::get_all_branches();
         // Seleccionar la rama actual
         self.branch_selected = self.branches
             .iter()
-            .position(|b| b == &self.branch)
+            .position(|b| b.is_current)
             .unwrap_or(0);
         self.mode = Mode::Branches;
     }
@@ -396,17 +396,66 @@ impl App {
 
     /// Cambia a la rama seleccionada
     pub fn checkout_selected_branch(&mut self) {
-        if let Some(branch) = self.branches.get(self.branch_selected) {
-            if branch == &self.branch {
+        if let Some(branch_info) = self.branches.get(self.branch_selected) {
+            if branch_info.is_current {
                 self.message = Some("Ya estas en esa rama".to_string());
                 return;
             }
 
-            match git::checkout_branch(branch) {
+            let result = if branch_info.is_remote {
+                // Rama remota: crear rama local con tracking
+                if let Some(ref remote) = branch_info.remote_name {
+                    git::checkout_remote_branch(remote, &branch_info.name)
+                } else {
+                    Err("Remote no encontrado".to_string())
+                }
+            } else {
+                // Rama local: checkout normal
+                git::checkout_branch(&branch_info.name)
+            };
+
+            match result {
                 Ok(_) => {
-                    self.message = Some(format!("Cambiado a rama: {}", branch));
+                    let msg = if branch_info.is_remote {
+                        format!("Rama creada y cambiada: {}", branch_info.name)
+                    } else {
+                        format!("Cambiado a rama: {}", branch_info.name)
+                    };
+                    self.message = Some(msg);
                     self.exit_branches_mode();
                     self.refresh();
+                }
+                Err(e) => {
+                    self.message = Some(format!("Error: {}", e));
+                }
+            }
+        }
+    }
+
+    /// Push de la rama seleccionada al remoto
+    pub fn push_selected_branch(&mut self) {
+        if let Some(branch_info) = self.branches.get(self.branch_selected) {
+            if branch_info.is_remote {
+                self.message = Some("Esta rama ya esta en el remoto".to_string());
+                return;
+            }
+
+            // Obtener el remote por defecto
+            let remote = match git::get_default_remote() {
+                Some(r) => r,
+                None => {
+                    self.message = Some("No hay remotes configurados".to_string());
+                    return;
+                }
+            };
+
+            self.message = Some(format!("Pushing {} a {}...", branch_info.name, remote));
+
+            match git::push_branch_to_remote(&remote, &branch_info.name) {
+                Ok(_) => {
+                    self.message = Some(format!("Rama {} enviada a {}", branch_info.name, remote));
+                    // Refrescar lista de ramas
+                    self.branches = git::get_all_branches();
                 }
                 Err(e) => {
                     self.message = Some(format!("Error: {}", e));
