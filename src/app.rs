@@ -917,4 +917,32 @@ impl App {
             }
         }
     }
+
+    // === Funciones de Stash ===
+
+    /// Guarda cambios en stash
+    pub fn do_stash(&mut self) {
+        match git::stash_push() {
+            Ok(_) => {
+                self.message = Some("Cambios guardados en stash".to_string());
+                self.refresh_silent();
+            }
+            Err(e) => {
+                self.message = Some(format!("Error: {}", e));
+            }
+        }
+    }
+
+    /// Recupera cambios del stash
+    pub fn do_stash_pop(&mut self) {
+        match git::stash_pop() {
+            Ok(_) => {
+                self.message = Some("Cambios recuperados del stash".to_string());
+                self.refresh_silent();
+            }
+            Err(e) => {
+                self.message = Some(format!("Error: {}", e));
+            }
+        }
+    }
 }

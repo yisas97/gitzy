@@ -417,7 +417,47 @@ pub fn checkout_branch(branch: &str) -> Result<(), String> {
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("git checkout fallo: {}", stderr))
+        if stderr.contains("would be overwritten") || stderr.contains("local changes") {
+            Err("Tienes cambios sin commit. Haz commit o stash primero".to_string())
+        } else {
+            Err(format!("Checkout fallo: {}", stderr.lines().next().unwrap_or("")))
+        }
+    }
+}
+
+// === Funciones de Stash ===
+
+/// Guarda los cambios actuales en el stash
+pub fn stash_push() -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["stash", "push", "-m", "gitzy stash"])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Stash fallo: {}", stderr))
+    }
+}
+
+/// Recupera los cambios del ultimo stash
+pub fn stash_pop() -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["stash", "pop"])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if stderr.contains("No stash entries") {
+            Err("No hay stash guardado".to_string())
+        } else {
+            Err(format!("Stash pop fallo: {}", stderr))
+        }
     }
 }
 

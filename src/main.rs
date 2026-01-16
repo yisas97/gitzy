@@ -199,6 +199,10 @@ fn main() -> Result<()> {
                             KeyCode::Char('P') => app.do_pull(),             // P = pull
                             KeyCode::Char('f') => app.do_fetch(),            // f = fetch
 
+                            // Stash
+                            KeyCode::Char('S') => app.do_stash(),            // S = stash (guardar)
+                            KeyCode::Char('z') => app.do_stash_pop(),        // z = stash pop (recuperar)
+
                             // Refrescar
                             KeyCode::Char('r') => app.refresh(),
 
