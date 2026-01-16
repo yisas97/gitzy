@@ -312,20 +312,31 @@ impl App {
         }
     }
 
-    /// Genera mensaje de commit con el proveedor de AI configurado
-    pub fn generate_commit_with_ai(&mut self) {
+    /// Solicita generacion de mensaje con AI (no bloquea, solo marca el flag)
+    pub fn request_ai_generation(&mut self) {
+        if self.generating_ai {
+            return; // Ya hay una generacion en curso
+        }
         self.generating_ai = true;
         let provider_name = self.ai_config.provider.display_name();
-        self.message = Some(format!("Generando mensaje con {}...", provider_name));
+        self.message = Some(format!("Generando con {}...", provider_name));
+    }
 
+    /// Ejecuta la generacion de AI (llamar despues de renderizar)
+    pub fn execute_ai_generation(&mut self) {
+        if !self.generating_ai {
+            return;
+        }
+
+        let provider_name = self.ai_config.provider.display_name();
         match self.ai_config.provider.generate_commit_message(&self.ai_config) {
             Ok(msg) => {
                 self.commit_message = msg;
                 self.cursor_position = self.commit_message.len();
-                self.message = Some(format!("Mensaje generado con {}", provider_name));
+                self.message = Some(format!("Listo ({})", provider_name));
             }
             Err(e) => {
-                self.message = Some(format!("Error {}: {}", provider_name, e));
+                self.message = Some(format!("Error: {}", e));
             }
         }
         self.generating_ai = false;

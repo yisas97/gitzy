@@ -105,21 +105,18 @@ impl AiConfig {
 /// Genera el prompt para todos los proveedores
 pub fn get_commit_prompt(diff: &str) -> String {
     format!(
-        "Genera un mensaje de commit corto en espanol.
+        "RESPONDE SOLO EN ESPAÑOL.
 
-IMPORTANTE - Solo responde con UNA linea asi:
-tipo: descripcion
+Genera commit message. UNA linea, maximo 50 chars.
+Formato: tipo: descripcion
 
-Reglas:
-- Maximo 50 caracteres en total
-- tipos: feat|fix|docs|refactor|chore
-- Sin cuerpo, sin explicaciones
-- Verbo infinitivo (agregar, corregir)
+tipos: feat, fix, docs, refactor, chore
+Verbos: agregar, corregir, actualizar, eliminar
 
-Ejemplos:
+Ejemplo de respuesta correcta:
 feat: agregar login
-fix: corregir validacion
-refactor: simplificar parseo
+
+NO expliques. NO uses ingles. SOLO el mensaje.
 
 Diff:
 {}",

@@ -39,6 +39,12 @@ fn main() -> Result<()> {
         // Render
         terminal.draw(|frame| ui::render(frame, &app))?;
 
+        // Si hay generacion de AI pendiente, ejecutarla (despues del render para mostrar "Generando...")
+        if app.generating_ai {
+            app.execute_ai_generation();
+            continue; // Volver a renderizar inmediatamente
+        }
+
         // Limpiar mensaje despues de unos ciclos
         if app.message.is_some() {
             message_timer += 1;
@@ -67,7 +73,7 @@ fn main() -> Result<()> {
                             KeyCode::Backspace => app.commit_delete_char(),
                             KeyCode::Left => app.commit_cursor_left(),
                             KeyCode::Right => app.commit_cursor_right(),
-                            KeyCode::Tab => app.generate_commit_with_ai(),
+                            KeyCode::Tab => app.request_ai_generation(),
                             // 'i' cambia el proveedor de AI (solo si el mensaje esta vacio)
                             KeyCode::Char('i') if app.commit_message.is_empty() => {
                                 app.cycle_ai_provider();
