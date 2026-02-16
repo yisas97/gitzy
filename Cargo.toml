@@ -5,6 +5,7 @@ edition = "2021"
 description = "Cliente Git TUI minimalista con soporte para AI"
 authors = ["Jesus Campos"]
 license = "MIT"
+readme = "README.md"
 repository = "https://github.com/yisas97/gitzy.git"
 keywords = ["git", "tui", "terminal", "cli"]
 categories = ["command-line-utilities", "development-tools"]

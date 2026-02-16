@@ -108,5 +108,13 @@ cargo test         # Ejecutar tests
 ## Publicacion
 El proyecto esta preparado para publicarse en **crates.io** con el nombre `gitzy`.
 
+## Cambios Recientes
+
+### Mejoras en Commit y AI (Enero 2026)
+- **Mejor manejo de errores en commit**: Ahora muestra el mensaje de error real de git (stdout o stderr)
+- **Mensajes de commit mas cortos**: Prompt optimizado para generar mensajes de max 50 caracteres
+- **Fix mensaje post-commit**: El mensaje "Commit: ..." ya no es sobrescrito por "Refrescado"
+- **Limpieza de respuestas AI**: Trunca a 50 chars y solo toma la primera linea valida
+
 ---
-*Ultima actualizacion: Enero 2026 - Soporte multi-proveedor AI*
+*Ultima actualizacion: Enero 2026 - Mejoras en commits y generacion AI*
